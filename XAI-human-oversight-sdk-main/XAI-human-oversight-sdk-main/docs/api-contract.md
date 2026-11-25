@@ -1,5 +1,19 @@
 # Backend API contract and current implementation
 
+## Rule evaluator update
+
+Evaluation now uses deployment-configured exact-action rules from
+`GOVERNANCE_POLICY_JSON`. Wire outcomes remain `allow`, `approval_required`, `deny`.
+BLOCK wins over approval and allow; no match or invalid/missing policy requires
+approval. Backend-verified project/agent identities scope rules; caller reason and
+metadata are excluded from matching. Added response fields are `risk_level`,
+`reason_code`, `matched_rule` (rule_id/effect/priority), and `policy_version`.
+Persisted decisions are reused on idempotent retries. See backend
+`docs/rule-based-evaluator.md` for configuration and precedence details.
+Automatic receipt issuance is separate: this branch returns no allow receipt,
+so the SDK continues to prevent execution without verified authorization.
+The approval-only descriptions below describe the previous baseline.
+
 The SDK calls a FastAPI service over HTTP. The routes below are mounted in this workspace's `Backend/app/governance.py`; they are separate from the SDK package. They currently persist approvals in the backend's existing SQLAlchemy database and surface them through the existing dashboard approval list and decision route.
 
 This is an initial HITL implementation. `POST /api/v1/oversight/evaluate` currently returns `approval_required` for every valid action. No risk, policy, or automatic-allow engine is implemented. Consequently, the SDK only runs a protected function after a dashboard reviewer approves and the backend verifies and consumes its receipt.
@@ -30,7 +44,7 @@ Register an agent with the SDK's `governance.register_agent(name, description, m
 - Timestamps are timezone-aware RFC 3339 values. Action parameters and metadata must be JSON objects.
 - Credential-like fields (for example `api_key`, `token`, `password`, `secret`, or `authorization`) are rejected in action parameters and metadata. Pass a secret reference instead.
 - Evaluation and approval creation require `Idempotency-Key` equal to the UUID `request_id`. Reusing a key with different logical action data returns `409`. Timestamp differences are ignored for this comparison.
-- The backend returns FastAPI error objects of the form `{"detail":"safe message"}`. It does not intentionally echo API keys or action parameter values. Common statuses: `400/422` invalid input, `401` missing/invalid credentials, `403` project or agent mismatch, `404` missing resource, `409` idempotency conflict/terminal state/replayed receipt, `410` expired receipt, `503` signing not configured, and `5xx` service failure.
+- The backend returns FastAPI error objects of the form `{"detail":"safe message"}`. It does not intentionally echo API keys or action parameter values. Common statuses: `400/422` invalid input, `401` missing/invalid credentials, `403` project or agent mismatch or a policy denial, `404` missing resource, `409` idempotency conflict/terminal state/replayed receipt, `410` expired receipt, `503` signing not configured, and `5xx` service failure.
 - HTTP request timeouts are client-side. Approval expiry is independently enforced by the backend. The SDK fails closed on timeout or unverifiable state.
 
 ## Register an agent
@@ -92,6 +106,8 @@ For an idempotent retry after approval creation, `approval_id` is populated. The
 ```
 
 Retries with the same request ID and action return the existing approval; changed action data returns `409`. The backend creates a corresponding row for the existing dashboard approval workflow. The human decision is made through the dashboard's authenticated `POST /api/v1/approvals/{approval_id}/decision` route with `{"decision":"Approved"|"Rejected","comment":"..."}`. Only a reviewer with project membership can decide an SDK approval.
+
+If the persisted evaluation for this request has outcome `deny`, approval creation returns `403`; an existing approval for that request cannot be used to authorize execution either.
 
 ## Read, wait, and cancel
 
