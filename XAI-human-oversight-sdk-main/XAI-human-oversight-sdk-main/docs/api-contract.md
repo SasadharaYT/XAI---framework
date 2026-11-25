@@ -4,19 +4,27 @@
 
 Evaluation now uses deployment-configured exact-action rules from
 `GOVERNANCE_POLICY_JSON`. Wire outcomes remain `allow`, `approval_required`, `deny`.
-BLOCK wins over approval and allow; no match or invalid/missing policy requires
-approval. Backend-verified project/agent identities scope rules; caller reason and
-metadata are excluded from matching. Added response fields are `risk_level`,
-`reason_code`, `matched_rule` (rule_id/effect/priority), and `policy_version`.
-Persisted decisions are reused on idempotent retries. See backend
-`docs/rule-based-evaluator.md` for configuration and precedence details.
-Automatic receipt issuance is separate: this branch returns no allow receipt,
-so the SDK continues to prevent execution without verified authorization.
-The approval-only descriptions below describe the previous baseline.
+Rules match exact action names and may be scoped to backend-verified project and
+agent identities. Precedence is `deny`, then `approval_required`, then `allow`;
+within an outcome, narrower identity scope, higher priority, and stable rule ID
+determine the winner. Missing, invalid, or non-matching policy requires approval.
+Caller reason, metadata, and action parameters do not influence rule matching.
+Responses include `risk_level`, `reason_code`, `matched_rule`
+(`rule_id`/`effect`/`priority`), and `policy_version`. Decisions are persisted and
+reused on idempotent retries. See backend `docs/rule-based-evaluator.md` for the
+policy schema and precedence details.
+
+A policy `allow` does not itself authorize execution: evaluation returns no
+authorization receipt, and the SDK must fail closed until it verifies a valid
+receipt. Approval receipts remain available through the human-review flow below.
 
 The SDK calls a FastAPI service over HTTP. The routes below are mounted in this workspace's `Backend/app/governance.py`; they are separate from the SDK package. They currently persist approvals in the backend's existing SQLAlchemy database and surface them through the existing dashboard approval list and decision route.
 
-This is an initial HITL implementation. `POST /api/v1/oversight/evaluate` currently returns `approval_required` for every valid action. No risk, policy, or automatic-allow engine is implemented. Consequently, the SDK only runs a protected function after a dashboard reviewer approves and the backend verifies and consumes its receipt.
+`POST /api/v1/oversight/evaluate` applies the configured rule policy and may return
+`allow`, `approval_required`, or `deny`. The SDK only runs a protected function
+after the backend verifies and consumes an authorization receipt; policy `allow`
+responses do not issue one, so protected actions still require the human-review
+receipt flow.
 
 ## Authentication and identity
 
@@ -85,10 +93,27 @@ Project mismatch returns `403`; missing project returns `404`. The backend check
 Returns `200`:
 
 ```json
-{"outcome":"approval_required","reason":"Human review is required","approval_id":null}
+{
+  "outcome":"approval_required",
+  "risk_level":"medium",
+  "reason":"No applicable valid rule; human review is required.",
+  "reason_code":"NO_MATCH",
+  "matched_rule":null,
+  "policy_version":"default",
+  "approval_id":null,
+  "authorization_receipt":null
+}
 ```
 
-For an idempotent retry after approval creation, `approval_id` is populated. The backend does not currently return `allow` or `deny`; those outcomes require a future authoritative policy/evaluation implementation. Invalid timestamps, credential-like context, and project/agent mismatches are rejected.
+When a rule matches, `risk_level` and `reason` come from that rule, and
+`matched_rule` identifies its ID, effect, and priority. A policy `deny` is returned
+as outcome `deny` with HTTP `200`; attempting to create an approval for that
+persisted denied evaluation returns `403`. For an idempotent retry after approval
+creation, `approval_id` is populated. Evaluation decisions are pinned to the first
+request and reused on retries, even if the configured policy changes. Invalid
+timestamps, credential-like context, and project/agent mismatches are rejected.
+The response schema and policy configuration are documented in backend
+`docs/rule-based-evaluator.md`.
 
 ## Create an approval
 
@@ -142,4 +167,4 @@ The receipt binds approval ID, request ID, project, agent, action name, canonica
 
 ## Deployment and limitations
 
-The backend requires `GOVERNANCE_RECEIPT_SECRET` to mint approvals. Use a durable shared database for multi-worker deployments; SQLite is suitable only for local/single-instance development. Current backend evaluation is intentionally approval-only; automatic allows, agent disablement, dashboard approval filtering by project, and formal SDK-agent-registration idempotency are not implemented. Database/schema changes in this backend should be applied before rollout. Do not run old and new backend versions against the same database during a schema migration without coordinating deployment.
+The backend requires `GOVERNANCE_RECEIPT_SECRET` to mint approval receipts. Use a durable shared database for multi-worker deployments; SQLite is suitable only for local/single-instance development. Evaluation uses the configured exact-action policy, but it does not issue automatic authorization receipts, so a policy `allow` alone cannot authorize SDK execution. Automatic agent disablement, dashboard approval filtering by project, and formal SDK-agent-registration idempotency are not implemented. Database/schema changes in this backend should be applied before rollout. Do not run old and new backend versions against the same database during a schema migration without coordinating deployment.
