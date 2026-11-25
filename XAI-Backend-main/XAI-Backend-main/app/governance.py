@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from . import main as core
-from .policy import evaluate as evaluate_policy
+from .policy import evaluate, load_policy
 
 router = APIRouter()
 
@@ -154,23 +154,6 @@ def _receipt_for(row: core.GovernanceApproval) -> str:
     return jwt.encode(claims, _receipt_secret(), algorithm="HS256")
 
 
-def _receipt_for_evaluation(response: dict[str, Any]) -> str:
-    claims = {
-        "sub": response["request_id"],
-        "kind": "evaluation",
-        "request_id": response["request_id"],
-        "project_id": response["project_id"],
-        "agent_id": response["agent_id"],
-        "action_name": response["action_name"],
-        "action_hash": response["action_hash"],
-        "policy_version": response["policy_version"],
-        "rule_id": (response.get("matched_rule") or {}).get("rule_id"),
-        "jti": hashlib.sha256(f"evaluation:{response['request_id']}".encode("utf-8")).hexdigest(),
-        "exp": int(datetime.fromisoformat(response["expires_at"].replace("Z", "+00:00")).timestamp()),
-    }
-    return jwt.encode(claims, _receipt_secret(), algorithm="HS256")
-
-
 def _approval_dict(row: core.GovernanceApproval) -> dict[str, Any]:
     result = {
         "approval_id": row.id,
@@ -199,9 +182,7 @@ def _approval_dict(row: core.GovernanceApproval) -> dict[str, Any]:
     return result
 
 
-def _sync_dashboard_row(
-    db: core.Session, row: core.GovernanceApproval, evaluation: dict[str, Any] | None = None
-) -> core.Approval:
+def _sync_dashboard_row(db: core.Session, row: core.GovernanceApproval) -> core.Approval:
     existing = db.get(core.Approval, row.id)
     if existing is None:
         existing = core.Approval(
@@ -210,7 +191,7 @@ def _sync_dashboard_row(
             action=row.action_name,
             tool=row.action_name,
             parameters=row.action_parameters_json,
-            risk=str((evaluation or {}).get("risk_level", "medium")).capitalize(),
+            risk="Human review",
             status="Pending",
             request=row.reason or row.action_name,
             reason=row.reason or "",
@@ -313,8 +294,7 @@ def evaluate_action(
     if idempotency_key != payload.request_id:
         raise HTTPException(400, "Idempotency-Key must match request_id")
     with core.SessionLocal() as db:
-        agent, requested_at, expires_at = _validate_action(db, payload, project_id)
-        project = db.get(core.Project, project_id)
+        agent, _, _ = _validate_action(db, payload, project_id)
         fingerprint = _fingerprint(payload)
         approval = db.scalar(
             select(core.GovernanceApproval).where(core.GovernanceApproval.request_id == payload.request_id)
@@ -323,38 +303,20 @@ def evaluate_action(
             if approval.project_id != project_id or approval.body_hash != fingerprint:
                 raise HTTPException(409, "Idempotency key was reused with different action data")
             previous = db.get(core.GovernanceEvaluation, payload.request_id)
-            response = json.loads(previous.response_json) if previous is not None else {
-                "outcome": "approval_required", "risk_level": "medium",
-                "reason": "Human review is required", "reason_code": "EXISTING_APPROVAL",
-                "matched_rule": None, "policy_version": "unknown", "evidence": [],
-            }
-            response["approval_id"] = approval.id
-            return response
+            if previous is not None:
+                result = json.loads(previous.response_json)
+                result['approval_id'] = approval.id
+                return result
+            return {"outcome": "approval_required", "reason": "Human review is required", "approval_id": approval.id,
+                    "risk_level": "medium", "reason_code": "EXISTING_APPROVAL", "matched_rule": None,
+                    "policy_version": "legacy", "authorization_receipt": None}
         previous = db.get(core.GovernanceEvaluation, payload.request_id)
         if previous is not None:
             if previous.project_id != project_id or previous.body_hash != fingerprint:
                 raise HTTPException(409, "Idempotency key was reused with different action data")
             return json.loads(previous.response_json)
-        result = evaluate_policy(
-            project=project,
-            agent=agent,
-            action_name=payload.action_name,
-            action_parameters=payload.action_parameters,
-            metadata=payload.metadata,
-        )
-        response = {
-            **result.as_dict(),
-            "approval_id": None,
-            "authorization_receipt": None,
-            "request_id": payload.request_id,
-            "project_id": project_id,
-            "agent_id": agent.id,
-            "action_name": payload.action_name,
-            "action_hash": _parameters_hash(payload.action_parameters),
-            "expires_at": _iso(expires_at),
-        }
-        if response["outcome"] == "allow":
-            response["authorization_receipt"] = _receipt_for_evaluation(response)
+        response = evaluate(load_policy(), action_name=payload.action_name,
+                            project_id=project_id, agent_id=agent.id)
         db.add(core.GovernanceEvaluation(
             request_id=payload.request_id,
             project_id=project_id,
@@ -383,6 +345,12 @@ def create_approval(
     with core.SessionLocal() as db:
         agent, requested_at, expires_at = _validate_action(db, payload, project_id)
         fingerprint = _fingerprint(payload)
+        evaluation = db.get(core.GovernanceEvaluation, payload.request_id)
+        if evaluation is not None:
+            if evaluation.project_id != project_id or evaluation.body_hash != fingerprint:
+                raise HTTPException(409, "Idempotency key was reused with different action data")
+            if json.loads(evaluation.response_json).get("outcome") == "deny":
+                raise HTTPException(403, "Action is denied by policy and cannot be submitted for approval")
         existing = db.scalar(
             select(core.GovernanceApproval).where(core.GovernanceApproval.request_id == payload.request_id)
         )
@@ -390,10 +358,6 @@ def create_approval(
             if existing.project_id != project_id or existing.body_hash != fingerprint:
                 raise HTTPException(409, "Idempotency key was reused with different action data")
             return _approval_dict(existing)
-        evaluation = db.get(core.GovernanceEvaluation, payload.request_id)
-        if evaluation is not None and (evaluation.project_id != project_id or evaluation.body_hash != fingerprint):
-            raise HTTPException(409, "Idempotency key was reused with different action data")
-        evaluation_response = json.loads(evaluation.response_json) if evaluation is not None else None
         row = core.GovernanceApproval(
             id=f"apr-{uuid.uuid4().hex[:20]}",
             request_id=payload.request_id,
@@ -412,7 +376,7 @@ def create_approval(
         )
         db.add(row)
         db.flush()
-        _sync_dashboard_row(db, row, evaluation_response)
+        _sync_dashboard_row(db, row)
         try:
             db.commit()
         except IntegrityError:
@@ -495,6 +459,12 @@ def verify_authorization(
     _reject_credentials(payload.action_parameters)
     with core.SessionLocal() as db:
         _require_agent(db, project_id, payload.agent_id)
+        evaluation = db.get(core.GovernanceEvaluation, payload.request_id)
+        if evaluation is not None:
+            if evaluation.project_id != project_id:
+                raise HTTPException(403, "Evaluation does not belong to the authenticated project")
+            if json.loads(evaluation.response_json).get("outcome") == "deny":
+                raise HTTPException(403, "Action is denied by policy and cannot be authorized")
         signing_secret = _receipt_secret()
         try:
             claims = jwt.decode(
@@ -508,18 +478,7 @@ def verify_authorization(
         except jwt.InvalidTokenError:
             raise HTTPException(403, "Authorization receipt is invalid") from None
         parameters_hash = _parameters_hash(payload.action_parameters)
-        if claims.get("kind") == "evaluation":
-            if payload.approval_id is not None:
-                raise HTTPException(403, "Automatic authorization cannot reference an approval")
-            evaluation = db.get(core.GovernanceEvaluation, payload.request_id)
-            if evaluation is None:
-                raise HTTPException(403, "Automatic authorization evaluation was not found")
-            response = json.loads(evaluation.response_json)
-            if response.get("outcome") != "allow" or response.get("authorization_receipt") != payload.authorization_receipt:
-                raise HTTPException(403, "Automatic authorization is not valid")
-            if response.get("action_hash") != parameters_hash:
-                raise HTTPException(403, "Authorization receipt does not match this action")
-        elif (
+        if (
             claims.get("request_id") != payload.request_id
             or claims.get("project_id") != project_id
             or claims.get("agent_id") != payload.agent_id
@@ -528,23 +487,19 @@ def verify_authorization(
             or claims.get("sub") != payload.approval_id
         ):
             raise HTTPException(403, "Authorization receipt does not match this action")
-        if claims.get("kind") == "evaluation":
-            if claims.get("project_id") != project_id or claims.get("agent_id") != payload.agent_id or claims.get("action_name") != payload.action_name:
-                raise HTTPException(403, "Authorization receipt does not match this action")
-        elif payload.approval_id is None:
+        if payload.approval_id is None:
             raise HTTPException(403, "Authorization receipt is not attached to an approval")
-        else:
-            row = db.get(core.GovernanceApproval, payload.approval_id)
-            if (
-                row is None
-                or row.project_id != project_id
-                or row.request_id != payload.request_id
-                or row.agent_id != payload.agent_id
-                or row.action_name != payload.action_name
-                or row.action_parameters_json != _canonical(payload.action_parameters)
-                or row.status != "approved"
-            ):
-                raise HTTPException(403, "Authorization receipt is not valid for this approval")
+        row = db.get(core.GovernanceApproval, payload.approval_id)
+        if (
+            row is None
+            or row.project_id != project_id
+            or row.request_id != payload.request_id
+            or row.agent_id != payload.agent_id
+            or row.action_name != payload.action_name
+            or row.action_parameters_json != _canonical(payload.action_parameters)
+            or row.status != "approved"
+        ):
+            raise HTTPException(403, "Authorization receipt is not valid for this approval")
         use = core.AuthorizationUse(
             jti=claims["jti"],
             request_id=payload.request_id,
