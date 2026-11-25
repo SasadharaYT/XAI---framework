@@ -1,0 +1,28 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.task-tmp/
+.venv/
+.env
+.env.*
+!.env.example
+dist/
+build/
+
+# Test and coverage output
+.coverage
+htmlcov/
+
+# Local databases and logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Editor files
+.idea/
+.vscode/
+*.swp
+
