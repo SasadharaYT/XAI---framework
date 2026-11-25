@@ -2,7 +2,7 @@
 
 The SDK calls a FastAPI service over HTTP. The routes below are mounted in this workspace's `Backend/app/governance.py`; they are separate from the SDK package. They currently persist approvals in the backend's existing SQLAlchemy database and surface them through the existing dashboard approval list and decision route.
 
-This is an initial HITL implementation. `POST /api/v1/oversight/evaluate` currently returns `approval_required` for every valid action. No risk, policy, or automatic-allow engine is implemented. Consequently, the SDK only runs a protected function after a dashboard reviewer approves and the backend verifies and consumes its receipt.
+The evaluator uses a deterministic rule policy. The semantic outcomes are `ALLOW`, `REQUIRE_APPROVAL`, and `BLOCK`; the wire values remain `allow`, `approval_required`, and `deny` for SDK compatibility. With no configured matching rule, the evaluator falls back to `approval_required`.
 
 ## Authentication and identity
 
@@ -71,10 +71,51 @@ Project mismatch returns `403`; missing project returns `404`. The backend check
 Returns `200`:
 
 ```json
-{"outcome":"approval_required","reason":"Human review is required","approval_id":null}
+{
+  "outcome":"approval_required",
+  "risk_level":"high",
+  "reason":"No policy rule matched; human review is required",
+  "reason_code":"NO_MATCH",
+  "matched_rule":null,
+  "policy_version":"default",
+  "evidence":[],
+  "approval_id":null,
+  "authorization_receipt":null
+}
 ```
 
-For an idempotent retry after approval creation, `approval_id` is populated. The backend does not currently return `allow` or `deny`; those outcomes require a future authoritative policy/evaluation implementation. Invalid timestamps, credential-like context, and project/agent mismatches are rejected.
+For an idempotent retry after approval creation, `approval_id` is populated. `matched_rule` contains the winning rule ID, effect, priority, and description. `policy_version` identifies the immutable policy used for evaluation. `evidence` contains sanitized fields used by the winning rule.
+
+Policy precedence is: request validation, explicit block rules, explicit approval rules, explicit allow rules, then the approval-required default. Exact and narrower matches win before higher priority and stable rule ID tie-breakers. Caller-supplied reason and metadata are never sufficient on their own to establish an allow decision; project and agent identity/risk/status come from backend records.
+
+The backend reads an optional JSON policy from `GOVERNANCE_POLICY_JSON`. For example:
+
+```json
+{
+  "version":"project_123:2026-01",
+  "default_outcome":"approval_required",
+  "rules":[
+    {
+      "rule_id":"allow-read-test",
+      "effect":"allow",
+      "priority":10,
+      "when":{"action_name":"read_profile","metadata_equals":{"environment":"test"}},
+      "reason":"Read-only test action is allowed",
+      "reason_code":"READ_ONLY_TEST"
+    },
+    {
+      "rule_id":"block-disabled-agent",
+      "effect":"deny",
+      "priority":1000,
+      "when":{"agent_status":"disabled"},
+      "reason":"Disabled agents cannot execute actions",
+      "reason_code":"AGENT_DISABLED"
+    }
+  ]
+}
+```
+
+An automatic `allow` response includes a signed authorization receipt. The SDK must submit it to `/api/v1/authorizations/verify` before execution. The receipt is bound to the persisted evaluation, request, project, agent, action, canonical parameter hash, policy version, rule ID, and expiry. Verification consumes a unique receipt ID transactionally; replay returns `409` and the action must not execute twice. If signing is not configured, automatic allow is unavailable and the action must not execute.
 
 ## Create an approval
 

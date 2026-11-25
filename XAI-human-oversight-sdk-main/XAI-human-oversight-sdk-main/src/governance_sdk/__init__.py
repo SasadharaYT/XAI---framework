@@ -12,7 +12,7 @@ from .exceptions import (
     GovernanceError,
     InvalidActionError,
 )
-from .models import ApprovalDecision, ApprovalRequest, ApprovalStatus, ActionRequest
+from .models import ApprovalDecision, ApprovalRequest, ApprovalStatus, ActionRequest, EvaluationResult
 
 __all__ = [
     "ApprovalDecision",
@@ -22,6 +22,7 @@ __all__ = [
     "ApprovalStatus",
     "ApprovalTimeoutError",
     "ActionRequest",
+    "EvaluationResult",
     "AuthenticationError",
     "AuthorizationVerificationError",
     "BackendUnavailableError",
