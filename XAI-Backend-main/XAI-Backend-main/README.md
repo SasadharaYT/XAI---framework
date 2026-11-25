@@ -1,6 +1,6 @@
 # Governance API backend
 
-This FastAPI service implements the HTTP API used by the separate Human-in-the-Loop Python SDK. It is an API service only; it does not add a policy/risk engine or frontend.
+This FastAPI service implements the HTTP API used by the separate Human-in-the-Loop Python SDK. It includes a deterministic rule-based risk and autonomy evaluator; it does not include the frontend.
 
 ## Local setup
 
@@ -26,4 +26,4 @@ The complete request/response contract, permissions, status codes, idempotency r
 
 ## Current behavior
 
-The evaluator currently places every valid action into human review. The existing dashboard approval decision route records reviewer ID/comment/time and creates a signed, expiring receipt for approval. The SDK's verify endpoint atomically consumes that receipt once before protected execution. Automatic allow/deny evaluation is future work. Avoid treating the dashboard's visual state or any client-supplied approval flag as authorization.
+The evaluator returns `allow`, `approval_required`, or `deny` based on `GOVERNANCE_POLICY_JSON`, with approval required as the safe default. Automatic allow receipts are signed and atomically consumed once by the verify endpoint. Avoid treating the dashboard's visual state or any client-supplied approval flag as authorization.

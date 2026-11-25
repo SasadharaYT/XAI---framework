@@ -29,7 +29,12 @@ class EvaluationResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     outcome: Literal["allow", "approval_required", "deny"]
+    risk_level: Literal["low", "medium", "high", "critical"] | None = None
     reason: str | None = None
+    reason_code: str | None = None
+    matched_rule: dict[str, Any] | None = None
+    policy_version: str | None = None
+    evidence: list[dict[str, Any]] = Field(default_factory=list)
     approval_id: str | None = None
     authorization_receipt: str | None = None
 
