@@ -7,6 +7,7 @@ import { resolve, join } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { apiClient } from '@/lib/api/client'
 import { getPolicy, savePolicy, type PolicyInput } from './api'
+import { getEvidence } from '@/features/recorded-evidence/api'
 
 const backend = resolve('../..', 'XAI-Backend-main/XAI-Backend-main')
 const python =
@@ -170,5 +171,35 @@ describe.skipIf(!existsSync(python))('real backend policy contract', () => {
     ).rejects.toMatchObject({ response: { status: 409 } })
     await savePolicy('integration', { ...enabled, version: 'v3', enabled: false })
     expect((await evaluate('policy-disabled')).result.outcome).toBe('approval_required')
+  })
+
+  test('reads recorded decisions through the real dashboard evidence adapter', async () => {
+    const now = new Date()
+    const request = {
+      request_id: 'evidence-contract',
+      project_id: 'integration',
+      agent_id: 'integration-agent',
+      action_name: 'read_profile',
+      action_parameters: { customer_id: 84 },
+      reason: 'Recorded caller context',
+      requested_at: now.toISOString(),
+      expires_at: new Date(now.getTime() + 60000).toISOString(),
+    }
+    const evaluation = await apiClient.post('/api/v1/oversight/evaluate', request, {
+      headers: {
+        Authorization: 'Bearer integration-sdk-key',
+        'Idempotency-Key': request.request_id,
+      },
+    })
+    const records = await getEvidence('integration', 0)
+    const record = records.items.find((item) => item.request_id === request.request_id)
+    expect(record?.evaluation.outcome).toBe(evaluation.data.outcome)
+    expect(record?.evaluation.policy_version).toBe(evaluation.data.policy_version)
+    expect(record?.context?.action_parameters).toEqual(request.action_parameters)
+    expect(record?.context_source).toBe('evaluation_snapshot')
+    expect(record?.execution_outcome).toBeNull()
+    expect(record?.human_review).toBeNull()
+    expect(JSON.stringify(records)).not.toContain('authorization_receipt')
+    await expect(getEvidence('other', 0)).rejects.toMatchObject({ response: { status: 403 } })
   })
 })

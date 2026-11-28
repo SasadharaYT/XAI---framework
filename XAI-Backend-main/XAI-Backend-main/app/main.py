@@ -40,6 +40,13 @@ class ProjectAPIKey(Base):
 class GovernanceEvaluation(Base):
     __tablename__ = 'governance_evaluations'; request_id: Mapped[str] = mapped_column(String, primary_key=True); project_id: Mapped[str] = mapped_column(String, index=True); body_hash: Mapped[str] = mapped_column(String); response_json: Mapped[str] = mapped_column(Text); created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+class EvaluationContext(Base):
+    """Original validated action snapshot, written atomically with its evaluation."""
+    __tablename__ = 'evaluation_contexts'
+    request_id: Mapped[str] = mapped_column(String, primary_key=True)
+    project_id: Mapped[str] = mapped_column(String, index=True)
+    context_json: Mapped[str] = mapped_column(Text)
+
 class ProjectPolicy(Base):
     __tablename__ = 'project_policies'
     project_id: Mapped[str] = mapped_column(ForeignKey('projects.id'), primary_key=True)
@@ -283,3 +290,5 @@ def membership(member_id: str, project_id: str, payload: MembershipIn, _: User =
 from .governance import router as governance_router
 
 app.include_router(governance_router)
+from .evidence import router as evidence_router
+app.include_router(evidence_router)

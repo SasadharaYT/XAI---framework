@@ -350,6 +350,10 @@ def evaluate_action(
             body_hash=fingerprint,
             response_json=_canonical(response),
         ))
+        db.add(core.EvaluationContext(
+            request_id=payload.request_id, project_id=project_id,
+            context_json=_canonical(payload.model_dump(mode="json")),
+        ))
         try:
             db.commit()
         except IntegrityError:

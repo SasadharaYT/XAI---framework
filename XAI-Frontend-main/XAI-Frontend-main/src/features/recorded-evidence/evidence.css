@@ -1,0 +1,58 @@
+.recorded-evidence,
+.evidence-details {
+  display: grid;
+  gap: 18px;
+}
+.recorded-evidence {
+  max-width: 1200px;
+}
+.recorded-evidence .panel {
+  min-width: 0;
+}
+.recorded-evidence dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 18px 0;
+}
+.recorded-evidence dt {
+  font-size: 13px;
+  color: var(--sentinel-muted, #60766c);
+}
+.recorded-evidence dd {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.recorded-evidence pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 12px;
+  border: 1px solid var(--sentinel-border, #d7e2dd);
+  border-radius: 8px;
+  max-height: 300px;
+  overflow: auto;
+}
+.evidence-selector {
+  display: grid;
+  gap: 8px;
+}
+.evidence-selector select {
+  padding: 10px;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--sentinel-border, #d7e2dd);
+  border-radius: 8px;
+}
+.evidence-pagination {
+  display: flex;
+  gap: 12px;
+}
+.recorded-evidence > button {
+  justify-self: start;
+}
+@media (max-width: 640px) {
+  .recorded-evidence dl {
+    grid-template-columns: 1fr;
+  }
+}
