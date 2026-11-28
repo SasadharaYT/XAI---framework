@@ -17,7 +17,8 @@ export function VerifyOtpPage() {
   const { setAuthenticated } = useAuth()
 
   const challengeId = searchParams.get('challenge') ?? ''
-  const initialChallenge = (location.state as { challenge?: OtpChallenge } | null)?.challenge ?? null
+  const initialChallenge =
+    (location.state as { challenge?: OtpChallenge } | null)?.challenge ?? null
 
   const [challenge, setChallenge] = useState<OtpChallenge | null>(
     initialChallenge?.challenge_id === challengeId ? initialChallenge : null,
@@ -66,7 +67,10 @@ export function VerifyOtpPage() {
     e.preventDefault()
     if (!challengeId) return
     if (code.length !== codeLength) {
-      setBanner({ type: 'error', text: `Please enter all ${codeLength} digits of the verification code.` })
+      setBanner({
+        type: 'error',
+        text: `Please enter all ${codeLength} digits of the verification code.`,
+      })
       return
     }
 
@@ -126,7 +130,10 @@ export function VerifyOtpPage() {
         subtitle="Please start from the sign-in or sign-up page."
         banner={{ type: 'error', text: 'No verification challenge was provided.' }}
         footer={
-          <Link to={AUTH_PATHS.login} className="text-slate-500 hover:text-slate-900 hover:underline">
+          <Link
+            to={AUTH_PATHS.login}
+            className="text-slate-500 hover:text-slate-900 hover:underline"
+          >
             &larr; Back to login
           </Link>
         }
@@ -197,4 +204,3 @@ export function VerifyOtpPage() {
     </AuthLayout>
   )
 }
-

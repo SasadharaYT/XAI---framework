@@ -1,15 +1,74 @@
 export type Risk = 'Low' | 'Medium' | 'High' | 'Critical'
 export type ApprovalStatus = 'Pending' | 'Approved' | 'Rejected' | 'Escalated' | 'Expired'
 export type ExecutionStatus = 'Succeeded' | 'Running' | 'Failed' | 'Interrupted'
-export type Agent = { id: string; name: string; description: string; framework: string; status: 'Active' | 'Idle' | 'Offline'; risk: Risk; executions: number; lastRun: string }
-export type Approval = { id: string; agent: string; action: string; tool: string; parameters: string; risk: Risk; status: ApprovalStatus; request: string; reason: string; explanation: string; reviewer: string; time: string; execution: ExecutionStatus }
-export type Execution = { id: string; agent: string; request: string; started: string; duration: string; status: ExecutionStatus; risk: Risk; tools: number; intervention: string }
-export type Project = { id: string; name: string; description: string; type: string; agentCount: number; executions: number; pendingApprovals: number; risk: Risk; lastActivity: string; accent: string }
-export type TeamMember = { id: string; name: string; email: string; initials: string; role: 'Team Leader' | 'Team Member'; status: 'Active' | 'Invited'; joinedDate: string; projectIds: string[] }
+export type Agent = {
+  id: string
+  name: string
+  description: string
+  framework: string
+  status: 'Active' | 'Idle' | 'Offline'
+  risk: Risk
+  executions: number
+  lastRun: string
+}
+export type Approval = {
+  id: string
+  agent: string
+  action: string
+  tool: string
+  parameters: string
+  risk: Risk
+  status: ApprovalStatus
+  request: string
+  reason: string
+  explanation: string
+  reviewer: string
+  time: string
+  execution: ExecutionStatus
+}
+export type Execution = {
+  id: string
+  agent: string
+  request: string
+  started: string
+  duration: string
+  status: ExecutionStatus
+  risk: Risk
+  tools: number
+  intervention: string
+}
+export type Project = {
+  id: string
+  name: string
+  description: string
+  type: string
+  agentCount: number
+  executions: number
+  pendingApprovals: number
+  risk: Risk
+  lastActivity: string
+  accent: string
+}
+export type TeamMember = {
+  id: string
+  name: string
+  email: string
+  initials: string
+  role: 'Team Leader' | 'Team Member'
+  status: 'Active' | 'Invited'
+  joinedDate: string
+  projectIds: string[]
+}
 export type TeamMembership = { memberId: string; projectId: string; hasAccess: boolean }
 export const teamMembers: TeamMember[] = []
 export const projects: Project[] = []
 export const agents: Agent[] = []
 export const approvals: Approval[] = []
 export const executions: Execution[] = []
-export const activity: Array<{ agent: string; event: string; risk: Risk; time: string; status: string }> = []
+export const activity: Array<{
+  agent: string
+  event: string
+  risk: Risk
+  time: string
+  status: string
+}> = []

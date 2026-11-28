@@ -15,6 +15,9 @@ Example policy body:
 ```
 
 Rules require unique IDs, exact action names, outcome, risk level and explanation.
+Each rule's optional boolean `enabled` defaults to true. Disabled rules stay in
+storage for later re-enabling, but are excluded before matching and precedence.
+If no enabled rule matches, evaluation requires human approval.
 Optional project_id and agent_id scope rules to identities verified by the backend.
 Unknown fields or malformed rules are rejected by the policy API. Missing,
 disabled, or invalid stored configuration and unknown actions require approval. There are no automatic

@@ -51,4 +51,3 @@ export interface ApiErrorDetail {
   attempts_remaining?: number
   retry_after?: number
 }
-

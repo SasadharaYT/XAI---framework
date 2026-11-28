@@ -19,4 +19,3 @@ export const authRoutes: RouteObject[] = [
   },
   { path: AUTH_PATHS.oauthCallback, element: <OAuthCallbackPage /> },
 ]
-

@@ -23,7 +23,12 @@ export function TeamsPage() {
   const closeDialog = () => setOpen(false)
   const dialogRef = useDialog(open, closeDialog)
   const client = useQueryClient()
-  const { data = [], isPending, isError, refetch } = useQuery({
+  const {
+    data = [],
+    isPending,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['team-members'],
     queryFn: demoService.getTeamMembers,
   })
@@ -111,90 +116,90 @@ export function TeamsPage() {
           )}
           {!isPending && !isError && (
             <>
-          <div className="toolbar">
-            <div className="team-toolbar">
-              <label className="filter-search">
-                <Search size={16} />
-                <input
-                  placeholder="Search members..."
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                />
-              </label>
-              <select
-                className="select-filter"
-                value={status}
-                onChange={(event) => setStatus(event.target.value as typeof status)}
-              >
-                <option>All</option>
-                <option>Active</option>
-                <option>Invited</option>
-              </select>
-            </div>
-            <span className="muted">{members.length} members</span>
-          </div>
-          <div className="table-scroll">
-            <table className="team-table">
-              <thead>
-                <tr>
-                  <th>MEMBER</th>
-                  <th>ROLE</th>
-                  {projects.map((project) => (
-                    <th key={project.id}>
-                      <Link to={`/projects/${project.id}/dashboard`}>{project.name}</Link>
-                    </th>
-                  ))}
-                  <th>STATUS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((member) => (
-                  <tr key={member.id}>
-                    <td>
-                      <div className="member-cell">
-                        <div className="avatar">{member.initials}</div>
-                        <div>
-                          <b>{member.name}</b>
-                          <small>{member.email}</small>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <Badge tone={member.role === 'Team Leader' ? 'blue' : 'neutral'}>
-                        {member.role}
-                      </Badge>
-                    </td>
-                    {projects.map((project) => {
-                      const hasAccess = member.projectIds.includes(project.id)
-                      return (
-                        <td key={project.id}>
-                          <button
-                            className={`access-toggle ${hasAccess ? 'access-on' : ''}`}
-                            aria-label={`${hasAccess ? 'Remove' : 'Add'} ${member.name} ${project.name} access`}
-                            disabled={member.id === 'usr-jordan'}
-                            onClick={() =>
-                              membership.mutate({
-                                memberId: member.id,
-                                projectId: project.id,
-                                hasAccess: !hasAccess,
-                              })
-                            }
-                          >
-                            {hasAccess ? <Check size={15} /> : <X size={15} />}
-                          </button>
+              <div className="toolbar">
+                <div className="team-toolbar">
+                  <label className="filter-search">
+                    <Search size={16} />
+                    <input
+                      placeholder="Search members..."
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                    />
+                  </label>
+                  <select
+                    className="select-filter"
+                    value={status}
+                    onChange={(event) => setStatus(event.target.value as typeof status)}
+                  >
+                    <option>All</option>
+                    <option>Active</option>
+                    <option>Invited</option>
+                  </select>
+                </div>
+                <span className="muted">{members.length} members</span>
+              </div>
+              <div className="table-scroll">
+                <table className="team-table">
+                  <thead>
+                    <tr>
+                      <th>MEMBER</th>
+                      <th>ROLE</th>
+                      {projects.map((project) => (
+                        <th key={project.id}>
+                          <Link to={`/projects/${project.id}/dashboard`}>{project.name}</Link>
+                        </th>
+                      ))}
+                      <th>STATUS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {members.map((member) => (
+                      <tr key={member.id}>
+                        <td>
+                          <div className="member-cell">
+                            <div className="avatar">{member.initials}</div>
+                            <div>
+                              <b>{member.name}</b>
+                              <small>{member.email}</small>
+                            </div>
+                          </div>
                         </td>
-                      )
-                    })}
-                    <td>
-                      <Badge tone={member.status === 'Active' ? 'green' : 'amber'}>
-                        {member.status}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        <td>
+                          <Badge tone={member.role === 'Team Leader' ? 'blue' : 'neutral'}>
+                            {member.role}
+                          </Badge>
+                        </td>
+                        {projects.map((project) => {
+                          const hasAccess = member.projectIds.includes(project.id)
+                          return (
+                            <td key={project.id}>
+                              <button
+                                className={`access-toggle ${hasAccess ? 'access-on' : ''}`}
+                                aria-label={`${hasAccess ? 'Remove' : 'Add'} ${member.name} ${project.name} access`}
+                                disabled={member.id === 'usr-jordan'}
+                                onClick={() =>
+                                  membership.mutate({
+                                    memberId: member.id,
+                                    projectId: project.id,
+                                    hasAccess: !hasAccess,
+                                  })
+                                }
+                              >
+                                {hasAccess ? <Check size={15} /> : <X size={15} />}
+                              </button>
+                            </td>
+                          )
+                        })}
+                        <td>
+                          <Badge tone={member.status === 'Active' ? 'green' : 'amber'}>
+                            {member.status}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </>
           )}
         </Card>

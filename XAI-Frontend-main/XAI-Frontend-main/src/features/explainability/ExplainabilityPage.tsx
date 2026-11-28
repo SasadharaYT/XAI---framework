@@ -6,9 +6,7 @@ import { Badge, Card, SectionTitle } from '@/components/shared/Primitives'
 export function ExplainabilityPage() {
   const [execution, setExecution] = useState(executions[1].id)
   const [agent, setAgent] = useState('All agents')
-  const availableExecutions = executions.filter(
-    (e) => agent === 'All agents' || e.agent === agent,
-  )
+  const availableExecutions = executions.filter((e) => agent === 'All agents' || e.agent === agent)
   const current = availableExecutions.find((e) => e.id === execution) ?? availableExecutions[0]
   if (!current) return null
   return (
@@ -43,7 +41,7 @@ export function ExplainabilityPage() {
               <option key={e.id} value={e.id}>
                 {e.id} · {e.agent}
               </option>
-              ))}
+            ))}
           </select>
         </label>
       </div>

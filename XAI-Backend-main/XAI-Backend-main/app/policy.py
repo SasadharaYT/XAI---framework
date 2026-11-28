@@ -18,6 +18,7 @@ class Rule(BaseModel):
     project_id: str | None = None
     agent_id: str | None = None
     priority: int = 0
+    enabled: bool = True
 
 
 class Policy(BaseModel):
@@ -58,7 +59,7 @@ class ProjectPolicyIn(Policy):
 def evaluate(policy: Policy, *, action_name: str, project_id: str, agent_id: str) -> dict:
     # Identity is resolved from backend records. Reason/metadata are deliberately
     # not arguments: a caller cannot claim a privileged context to gain ALLOW.
-    matches = [r for r in policy.rules if r.action_name == action_name
+    matches = [r for r in policy.rules if r.enabled and r.action_name == action_name
                and (r.project_id is None or r.project_id == project_id)
                and (r.agent_id is None or r.agent_id == agent_id)]
     matches.sort(key=lambda r: (

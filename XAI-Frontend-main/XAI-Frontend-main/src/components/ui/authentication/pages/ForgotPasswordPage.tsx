@@ -58,7 +58,10 @@ export function ForgotPasswordPage() {
     try {
       await authApi.resetPassword(challenge.challenge_id, code, newPassword)
       setStep('done')
-      setBanner({ type: 'success', text: 'Your password has been updated. All existing sessions were signed out.' })
+      setBanner({
+        type: 'success',
+        text: 'Your password has been updated. All existing sessions were signed out.',
+      })
     } catch (err) {
       if (err instanceof AuthApiError && err.code === 'otp_invalid') {
         setCode('')
@@ -103,7 +106,10 @@ export function ForgotPasswordPage() {
       {step === 'request' && (
         <form onSubmit={handleRequest}>
           <div className="mb-4 text-left">
-            <label htmlFor="forgot-email" className="mb-1 block text-[0.78rem] font-semibold text-slate-700">
+            <label
+              htmlFor="forgot-email"
+              className="mb-1 block text-[0.78rem] font-semibold text-slate-700"
+            >
               Email address
             </label>
             <div className="relative flex items-center">
@@ -134,10 +140,18 @@ export function ForgotPasswordPage() {
 
       {step === 'reset' && challenge && (
         <form onSubmit={handleReset}>
-          <OtpInput length={challenge.code_length} value={code} onChange={setCode} disabled={submitting} />
+          <OtpInput
+            length={challenge.code_length}
+            value={code}
+            onChange={setCode}
+            disabled={submitting}
+          />
 
           <div className="mb-4 text-left">
-            <label htmlFor="reset-password" className="mb-1 block text-[0.78rem] font-semibold text-slate-700">
+            <label
+              htmlFor="reset-password"
+              className="mb-1 block text-[0.78rem] font-semibold text-slate-700"
+            >
               New password
             </label>
             <div className="relative flex items-center">
@@ -199,4 +213,3 @@ export function ForgotPasswordPage() {
     </AuthLayout>
   )
 }
-

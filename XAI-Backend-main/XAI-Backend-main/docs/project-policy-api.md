@@ -55,6 +55,14 @@ the route project; optional `agent_id` must belong to that project. The project
 cannot be selected or changed through a body field. Invalid requests do not
 change stored policies.
 
+Each rule also supports `enabled`, a strict JSON boolean defaulting to true.
+Disabled rules remain persisted and returned by GET, but never participate in
+matching or precedence. They can be re-enabled in a subsequent version. All rule
+validation and project/agent isolation still apply to disabled rules. Existing
+JSON records without this field are enabled by default; no table column change
+or data backfill is needed. New saves include the field explicitly. Coordinate
+backend/frontend deployment before sending it to older strict API schemas.
+
 ## Evaluation behavior
 
 Evaluation authenticates the SDK key, checks project/agent membership, then loads

@@ -75,7 +75,10 @@ export function SignupPage() {
 
       <form onSubmit={handleSubmit}>
         <div className="mb-3 text-left">
-          <label htmlFor="signup-name" className="mb-1 block text-[0.78rem] font-semibold text-slate-700">
+          <label
+            htmlFor="signup-name"
+            className="mb-1 block text-[0.78rem] font-semibold text-slate-700"
+          >
             Full name
           </label>
           <div className="relative flex items-center">
@@ -96,7 +99,10 @@ export function SignupPage() {
         </div>
 
         <div className="mb-3 text-left">
-          <label htmlFor="signup-email" className="mb-1 block text-[0.78rem] font-semibold text-slate-700">
+          <label
+            htmlFor="signup-email"
+            className="mb-1 block text-[0.78rem] font-semibold text-slate-700"
+          >
             Email address
           </label>
           <div className="relative flex items-center">
@@ -117,7 +123,10 @@ export function SignupPage() {
         </div>
 
         <div className="mb-3 text-left">
-          <label htmlFor="signup-password" className="mb-1 block text-[0.78rem] font-semibold text-slate-700">
+          <label
+            htmlFor="signup-password"
+            className="mb-1 block text-[0.78rem] font-semibold text-slate-700"
+          >
             Password
           </label>
           <div className="relative flex items-center">
@@ -156,11 +165,19 @@ export function SignupPage() {
             />
             <span>
               I agree to{' '}
-              <a href="#terms" onClick={(e) => e.preventDefault()} className="font-medium text-slate-900 hover:underline">
+              <a
+                href="#terms"
+                onClick={(e) => e.preventDefault()}
+                className="font-medium text-slate-900 hover:underline"
+              >
                 Terms
               </a>{' '}
               &amp;{' '}
-              <a href="#privacy" onClick={(e) => e.preventDefault()} className="font-medium text-slate-900 hover:underline">
+              <a
+                href="#privacy"
+                onClick={(e) => e.preventDefault()}
+                className="font-medium text-slate-900 hover:underline"
+              >
                 Privacy
               </a>
             </span>
@@ -178,4 +195,3 @@ export function SignupPage() {
     </AuthLayout>
   )
 }
-

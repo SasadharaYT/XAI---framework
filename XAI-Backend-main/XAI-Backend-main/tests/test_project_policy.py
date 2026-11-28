@@ -169,3 +169,34 @@ def test_concurrent_updates_do_not_silently_overwrite(api):
         second_row.version = 'v3'
         with pytest.raises(StaleDataError):
             second.commit()
+
+
+def test_disabled_rule_roundtrip_and_reenable(api):
+    client, headers, _, action = api
+    path = '/api/v1/projects/p/policy'
+    disabled = payload('allow', rules=[dict(rule('allow'), enabled=False)])
+    assert client.put(path, headers=headers['member'], json=disabled).status_code == 200
+    stored = client.get(path, headers=headers['member']).json()
+    assert len(stored['rules']) == 1
+    assert stored['rules'][0]['enabled'] is False
+    assert governance.evaluate_action(action, 'r', 'p')['outcome'] == 'approval_required'
+    disabled['version'] = 'v2'
+    disabled['rules'][0]['enabled'] = True
+    assert client.put(path, headers=headers['member'], json=disabled).status_code == 200
+    new = action.model_copy(update={'request_id': 'reenabled'})
+    assert governance.evaluate_action(new, 'reenabled', 'p')['outcome'] == 'allow'
+
+
+def test_disabled_rules_still_require_valid_schema_and_scope(api):
+    client, headers, _, _ = api
+    path = '/api/v1/projects/p/policy'
+    for fields in [{'enabled': 'false'}, {'enabled': False, 'project_id': 'q'}, {'enabled': False, 'action_name': ''}]:
+        assert client.put(path, headers=headers['member'], json=payload(rules=[dict(rule('allow'), **fields)])).status_code == 422
+
+
+@pytest.mark.parametrize('identity,expected', [('member', ['p']), ('other', ['q']), ('inactive', []), ('outsider', [])])
+def test_project_picker_only_lists_accessible_projects(api, identity, expected):
+    client, headers, _, _ = api
+    response = client.get('/api/v1/projects', headers=headers[identity])
+    assert response.status_code == 200
+    assert [project['id'] for project in response.json()] == expected

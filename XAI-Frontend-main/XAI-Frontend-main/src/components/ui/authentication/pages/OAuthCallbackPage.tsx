@@ -55,7 +55,9 @@ export function OAuthCallbackPage() {
     <AuthLayout
       icon={<ShieldCheck size={20} strokeWidth={2.2} />}
       title={errorText ? 'Sign-in failed' : 'Completing sign-in…'}
-      subtitle={errorText ? 'We could not finish signing you in' : 'Establishing your secure session'}
+      subtitle={
+        errorText ? 'We could not finish signing you in' : 'Establishing your secure session'
+      }
       banner={errorText ? { type: 'error', text: errorText } : null}
     >
       {errorText ? (
@@ -71,4 +73,3 @@ export function OAuthCallbackPage() {
     </AuthLayout>
   )
 }
-

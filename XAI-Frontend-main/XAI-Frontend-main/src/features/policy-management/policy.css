@@ -1,0 +1,74 @@
+.policy-management {
+  max-width: 1100px;
+}
+.policy-management form,
+.policy-management form > fieldset {
+  display: grid;
+  gap: 18px;
+}
+.policy-management fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+  margin: 0;
+}
+.policy-management .panel {
+  display: grid;
+  gap: 12px;
+}
+.policy-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.policy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.policy-grid label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+.policy-grid input,
+.policy-grid select,
+.policy-grid textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--sentinel-border, #b8c9c2);
+  border-radius: 7px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+}
+.policy-grid textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+.policy-management .policy-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.policy-check input {
+  width: auto;
+}
+.policy-wide {
+  grid-column: 1 / -1;
+}
+.policy-management button {
+  justify-self: start;
+}
+.policy-management fieldset:disabled {
+  opacity: 0.65;
+}
+.policy-management [role='alert'] {
+  color: #a62e32;
+}
+@media (max-width: 640px) {
+  .policy-grid {
+    grid-template-columns: 1fr;
+  }
+}

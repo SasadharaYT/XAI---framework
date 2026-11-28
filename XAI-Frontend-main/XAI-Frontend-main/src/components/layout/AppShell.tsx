@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/components/ui/authentication'
-import { projects } from '@/features/dashboard/data'
+import { useQuery } from '@tanstack/react-query'
+import { demoService } from '@/features/dashboard/service'
 import {
   Activity,
   Bot,
@@ -24,7 +25,10 @@ export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [dark, setDark] = useState(() => {
     const saved = localStorage.getItem('demo-theme')
-    return saved === 'dark' || (saved === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    return (
+      saved === 'dark' ||
+      (saved === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    )
   })
   const [notifications, setNotifications] = useState(false)
   const [workspaceOpen, setWorkspaceOpen] = useState(false)
@@ -32,6 +36,12 @@ export function AppShell() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const projectsQuery = useQuery({
+    queryKey: ['projects', user?.id],
+    queryFn: demoService.getProjects,
+    enabled: Boolean(user),
+  })
+  const projects = projectsQuery.data ?? []
   const { projectId } = useParams()
   const project = projects.find((item) => item.id === projectId)
   const base = projectId ? `/projects/${projectId}` : '/settings'
@@ -43,6 +53,7 @@ export function AppShell() {
         { to: `${base}/executions`, label: 'Execution history', icon: FileClock },
         { to: `${base}/explainability`, label: 'Explainability', icon: Workflow },
         { to: `${base}/reports`, label: 'Transparency reports', icon: FileText },
+        { to: `${base}/policy`, label: 'Project policy', icon: Settings },
       ]
     : [{ to: '/settings', label: 'Settings', icon: Settings }]
   const current = links.find((link) => link.to === location.pathname) ?? links[0]
@@ -65,8 +76,16 @@ export function AppShell() {
 
   return (
     <div className={dark ? 'theme-dark min-h-screen' : 'min-h-screen'}>
-      {mobileOpen && <button className="mobile-backdrop" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
-      <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'sidebar-mobile-open' : ''}`}>
+      {mobileOpen && (
+        <button
+          className="mobile-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+      <aside
+        className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'sidebar-mobile-open' : ''}`}
+      >
         <div className="brand">
           <div className="brand-mark">
             <Activity size={19} />
@@ -81,7 +100,7 @@ export function AppShell() {
           <button
             aria-label="Toggle sidebar"
             className="icon-button collapse-button"
-              onClick={() => setCollapsed(!collapsed)}
+            onClick={() => setCollapsed(!collapsed)}
           >
             <ChevronLeft size={17} />
           </button>

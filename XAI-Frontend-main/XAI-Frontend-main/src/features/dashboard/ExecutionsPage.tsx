@@ -42,7 +42,11 @@ export function ExecutionsPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </label>
-            <select className="select-filter" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <select
+            className="select-filter"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
             <option value="All">All statuses</option>
             <option>Succeeded</option>
             <option>Interrupted</option>
@@ -82,42 +86,46 @@ export function ExecutionsPage() {
                 </tr>
               ) : (
                 rows.map((e) => (
-                <tr
-                  className="click-row"
-                  key={e.id}
-                  tabIndex={0}
-                  onClick={() => setSelected(e)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      setSelected(e)
-                    }
-                  }}
-                >
-                  <td>
-                    <b>{e.id}</b>
-                    <small>{e.agent}</small>
-                  </td>
-                  <td>{e.request}</td>
-                  <td>{e.started}</td>
-                  <td>{e.duration}</td>
-                  <td>
-                    <Badge
-                      tone={
-                        e.status === 'Succeeded' ? 'green' : e.status === 'Failed' ? 'red' : 'amber'
+                  <tr
+                    className="click-row"
+                    key={e.id}
+                    tabIndex={0}
+                    onClick={() => setSelected(e)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        setSelected(e)
                       }
-                    >
-                      {e.status}
-                    </Badge>
-                  </td>
-                  <td>
-                    <Badge tone={tone(e.risk)}>{e.risk}</Badge>
-                  </td>
-                  <td>{e.tools}</td>
-                  <td>
-                    <ChevronRight size={16} />
-                  </td>
-                </tr>
+                    }}
+                  >
+                    <td>
+                      <b>{e.id}</b>
+                      <small>{e.agent}</small>
+                    </td>
+                    <td>{e.request}</td>
+                    <td>{e.started}</td>
+                    <td>{e.duration}</td>
+                    <td>
+                      <Badge
+                        tone={
+                          e.status === 'Succeeded'
+                            ? 'green'
+                            : e.status === 'Failed'
+                              ? 'red'
+                              : 'amber'
+                        }
+                      >
+                        {e.status}
+                      </Badge>
+                    </td>
+                    <td>
+                      <Badge tone={tone(e.risk)}>{e.risk}</Badge>
+                    </td>
+                    <td>{e.tools}</td>
+                    <td>
+                      <ChevronRight size={16} />
+                    </td>
+                  </tr>
                 ))
               )}
             </tbody>

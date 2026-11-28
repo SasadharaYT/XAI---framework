@@ -69,6 +69,14 @@ def test_unknown_action():
                     project_id='p', agent_id='a')['outcome'] == 'approval_required'
 
 
+@pytest.mark.parametrize('outcome', ['allow', 'deny', 'approval_required'])
+def test_disabled_rules_never_match(outcome):
+    result = evaluate(Policy(version='v1', rules=[rule(outcome, enabled=False)]),
+                      action_name='read', project_id='p', agent_id='a')
+    assert result['outcome'] == 'approval_required'
+    assert result['matched_rule'] is None
+
+
 def test_route_retry_is_pinned_and_context_cannot_override(monkeypatch):
     engine, sessions, action = _route_context(monkeypatch)
     store_policy(sessions, 'deny')

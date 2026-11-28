@@ -15,4 +15,3 @@ export { OAuthCallbackPage } from './pages/OAuthCallbackPage'
 export { AUTH_PATHS, consumeReturnTo, rememberReturnTo } from './paths'
 export { authRoutes } from './routes'
 export type * from './types'
-

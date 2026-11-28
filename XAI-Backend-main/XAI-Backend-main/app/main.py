@@ -181,8 +181,13 @@ def me(user: User = Depends(current_user)): return user_out(user)
 def oauth_providers(): return {'providers': []}
 
 @app.get('/api/v1/projects')
-def projects(_: User = Depends(current_user)):
-    with SessionLocal() as db: return [model_dict(x) for x in db.scalars(select(Project)).all()]
+def projects(user: User = Depends(current_user)):
+    with SessionLocal() as db:
+        member = db.scalar(select(TeamMember).where(TeamMember.email == user.email))
+        if member is None or member.status != 'Active':
+            return []
+        project_ids = [value for value in member.project_ids.split(',') if value]
+        return [model_dict(row) for row in db.scalars(select(Project).where(Project.id.in_(project_ids))).all()]
 @app.post('/api/v1/projects', status_code=201)
 def create_project(payload: ProjectIn, user: User = Depends(current_user)):
     """Create a project and grant the creator active team-leader access."""

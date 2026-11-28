@@ -9,6 +9,10 @@ Active project members manage it with dashboard-authenticated GET/PUT
 invalid stored policies require human review. See backend
 `docs/project-policy-api.md` for setup, migration, and the policy API contract.
 Wire outcomes remain `allow`, `approval_required`, `deny`.
+Rules may include a strict boolean `enabled` (default true). Disabled rules remain
+stored for dashboard editing but are excluded from matching; if no enabled rule
+matches, evaluation requires human approval. Changes to enabled state require a
+new policy version and do not revoke receipts from previously pinned decisions.
 Rules match exact action names and may be scoped to backend-verified project and
 agent identities. Precedence is `deny`, then `approval_required`, then `allow`;
 within an outcome, narrower identity scope, higher priority, and stable rule ID

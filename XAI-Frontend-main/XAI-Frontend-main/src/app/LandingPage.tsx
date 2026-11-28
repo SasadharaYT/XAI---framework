@@ -31,8 +31,8 @@ export function LandingPage() {
             Safe, transparent AI agent operations
           </h1>
           <p className="mb-8 max-w-2xl text-lg leading-8 text-slate-600">
-            Explore governance workflows for risk assessment, human oversight, explainability,
-            and policy auditing across your agent systems.
+            Explore governance workflows for risk assessment, human oversight, explainability, and
+            policy auditing across your agent systems.
           </p>
           <Link
             className="rounded-lg bg-[#1556a6] px-6 py-3 font-medium text-white shadow-sm hover:bg-[#12498d]"
@@ -41,22 +41,37 @@ export function LandingPage() {
             Log in to continue <ArrowRight className="ml-2 inline h-4 w-4" />
           </Link>
           <div className="mt-16 flex flex-wrap justify-center gap-6 text-sm text-slate-500">
-            <span className="flex items-center gap-2"><Cpu className="h-5 w-5" /> Agent action</span>
+            <span className="flex items-center gap-2">
+              <Cpu className="h-5 w-5" /> Agent action
+            </span>
             <span>→</span>
-            <span className="flex items-center gap-2"><ShieldCheck className="h-5 w-5" /> Risk and guardrails</span>
+            <span className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5" /> Risk and guardrails
+            </span>
             <span>→</span>
-            <span className="flex items-center gap-2"><Eye className="h-5 w-5" /> Human oversight</span>
+            <span className="flex items-center gap-2">
+              <Eye className="h-5 w-5" /> Human oversight
+            </span>
           </div>
         </section>
 
         <section id="pillars" className="border-t border-slate-200 bg-white px-6 py-16">
           <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-3">
             {[
-              ['Governance and security', 'Evaluate agent actions against policies and risk controls.'],
+              [
+                'Governance and security',
+                'Evaluate agent actions against policies and risk controls.',
+              ],
               ['Human oversight', 'Route sensitive decisions to reviewers with clear context.'],
-              ['Explainable operations', 'Trace executions, evidence, and decisions in one workspace.'],
+              [
+                'Explainable operations',
+                'Trace executions, evidence, and decisions in one workspace.',
+              ],
             ].map(([title, description]) => (
-              <article className="rounded-xl border border-[#d3dfed] bg-white p-6 shadow-sm" key={title}>
+              <article
+                className="rounded-xl border border-[#d3dfed] bg-white p-6 shadow-sm"
+                key={title}
+              >
                 <h2 className="mb-2 text-xl font-bold">{title}</h2>
                 <p className="text-slate-600">{description}</p>
               </article>
