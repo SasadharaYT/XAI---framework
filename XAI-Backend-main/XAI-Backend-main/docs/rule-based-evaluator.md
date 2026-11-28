@@ -4,7 +4,11 @@ POST /api/v1/oversight/evaluate preserves the request, authentication, project/a
 checks, timestamp validation and Idempotency-Key contract. API validation failures
 remain HTTP errors. A valid policy BLOCK returns HTTP 200 with outcome `deny`.
 
-Deployment-owned GOVERNANCE_POLICY_JSON configures the evaluator:
+The project's enabled database policy configures HTTP evaluation. Active project
+members manage it with `GET`/`PUT /api/v1/projects/{project_id}/policy`; see
+`project-policy-api.md` for authentication, validation, migration, and setup.
+`GOVERNANCE_POLICY_JSON` is no longer a global fallback for HTTP requests.
+Example policy body:
 
 ```json
 {"version":"v1","rules":[{"rule_id":"read-policy","action_name":"read_profile","project_id":"project-1","outcome":"allow","risk_level":"low","reason":"Approved read operation","priority":10}]}
@@ -12,8 +16,8 @@ Deployment-owned GOVERNANCE_POLICY_JSON configures the evaluator:
 
 Rules require unique IDs, exact action names, outcome, risk level and explanation.
 Optional project_id and agent_id scope rules to identities verified by the backend.
-Unknown fields or malformed rules invalidate the entire configuration. Missing or
-invalid configuration and unknown actions require approval. There are no automatic
+Unknown fields or malformed rules are rejected by the policy API. Missing,
+disabled, or invalid stored configuration and unknown actions require approval. There are no automatic
 action-name heuristics. Caller reason and metadata never influence matching.
 Parameters describe the action but are not verified external facts and are not
 matched in this first version. Allow rules therefore authorize all parameter values
