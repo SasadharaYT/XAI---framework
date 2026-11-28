@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, create_engine, inspect as sqlalchemy_inspect, select, text
+from sqlalchemy import DateTime, Integer, String, Text, create_engine, inspect as sqlalchemy_inspect, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
@@ -39,16 +39,6 @@ class ProjectAPIKey(Base):
     __tablename__ = 'project_api_keys'; id: Mapped[str] = mapped_column(String, primary_key=True); project_id: Mapped[str] = mapped_column(String, index=True); key_hash: Mapped[str] = mapped_column(String, unique=True, index=True); key_prefix: Mapped[str] = mapped_column(String); name: Mapped[str] = mapped_column(String); created_by: Mapped[str] = mapped_column(String); created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc)); revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 class GovernanceEvaluation(Base):
     __tablename__ = 'governance_evaluations'; request_id: Mapped[str] = mapped_column(String, primary_key=True); project_id: Mapped[str] = mapped_column(String, index=True); body_hash: Mapped[str] = mapped_column(String); response_json: Mapped[str] = mapped_column(Text); created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
-
-class ProjectPolicy(Base):
-    __tablename__ = 'project_policies'
-    project_id: Mapped[str] = mapped_column(ForeignKey('projects.id'), primary_key=True)
-    version: Mapped[str] = mapped_column(String)
-    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
-    rules_json: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
-    __mapper_args__ = {"version_id_col": version, "version_id_generator": False}
 class GovernanceApproval(Base):
     __tablename__ = 'governance_approvals'; id: Mapped[str] = mapped_column(String, primary_key=True); request_id: Mapped[str] = mapped_column(String, unique=True, index=True); project_id: Mapped[str] = mapped_column(String, index=True); agent_id: Mapped[str] = mapped_column(String, index=True); agent_name: Mapped[str | None] = mapped_column(String, nullable=True); action_name: Mapped[str] = mapped_column(String); action_parameters_json: Mapped[str] = mapped_column(Text); reason: Mapped[str | None] = mapped_column(Text, nullable=True); metadata_json: Mapped[str] = mapped_column(Text, default='{}'); requested_at: Mapped[datetime] = mapped_column(DateTime); submitted_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc)); expires_at: Mapped[datetime] = mapped_column(DateTime); status: Mapped[str] = mapped_column(String, default='pending', index=True); reviewer_id: Mapped[str | None] = mapped_column(String, nullable=True); reviewer_comment: Mapped[str | None] = mapped_column(Text, nullable=True); reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True); body_hash: Mapped[str] = mapped_column(String)
 class AuthorizationUse(Base):
@@ -123,7 +113,7 @@ app.add_middleware(CORSMiddleware, allow_origins=[os.getenv('FRONTEND_URL', 'htt
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Avoid echoing submitted action values in SDK endpoint validation errors."""
-    if request.url.path.endswith('/policy') or request.url.path == '/api/v1/agents' or request.url.path.startswith((
+    if request.url.path == '/api/v1/agents' or request.url.path.startswith((
         '/api/v1/oversight/', '/api/v1/authorizations/', '/api/v1/approvals/'
     )):
         return JSONResponse(status_code=422, content={'detail': 'Invalid request'})

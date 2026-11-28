@@ -32,9 +32,5 @@ review records reviewer details and issues the existing approval receipt. Both
 receipts must be verified and atomically consumed once before SDK execution.
 BLOCK stops execution and cannot create an approval. Missing or invalid policy
 defaults to human review. See `docs/rule-based-evaluator.md` for configuration.
-Policies are stored per project and managed through authenticated GET/PUT
-`/api/v1/projects/{project_id}/policy`. See
-[project policy setup and migration](docs/project-policy-api.md). HTTP evaluation
-does not use `GOVERNANCE_POLICY_JSON` as a fallback.
 Startup creates the additive `automatic_authorizations` table. Avoid treating
 dashboard state or any client-supplied decision or approval flag as authorization.

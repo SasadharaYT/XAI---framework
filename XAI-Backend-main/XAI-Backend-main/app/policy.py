@@ -1,4 +1,4 @@
-"""Deterministic rule engine and validated project policy input schema."""
+"""Small deterministic policy engine. Configuration is deployment-owned."""
 import os
 from typing import Literal
 
@@ -40,19 +40,6 @@ def load_policy() -> Policy:
         return Policy.model_validate_json(raw)
     except ValidationError:
         return Policy(version='invalid')
-
-
-class ProjectPolicyIn(Policy):
-    """Full policy replacement; tenant identity comes exclusively from the route."""
-    version: str = Field(min_length=1, max_length=120, pattern=r'\S')
-    enabled: bool = True
-
-    @model_validator(mode='after')
-    def nonblank_rule_fields(self):
-        for rule in self.rules:
-            if any(not value.strip() for value in (rule.rule_id, rule.action_name, rule.reason)):
-                raise ValueError('Rule IDs, actions and reasons must not be blank')
-        return self
 
 
 def evaluate(policy: Policy, *, action_name: str, project_id: str, agent_id: str) -> dict:
