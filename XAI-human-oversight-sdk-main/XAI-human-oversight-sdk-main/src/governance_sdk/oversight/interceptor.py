@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import threading
 from collections.abc import Callable
 from inspect import isawaitable
@@ -24,7 +23,6 @@ class ExecutionInterceptor:
     def __init__(self, manager: ApprovalManager) -> None:
         self._manager = manager
         self._sync_lock = threading.Lock()
-        self._async_lock = asyncio.Lock()
         self._claimed: set[str] = set()
 
     def run(
@@ -40,6 +38,8 @@ class ExecutionInterceptor:
             if evaluation.outcome == "deny":
                 raise ApprovalRejectedError(evaluation.reason or "Backend denied this action")
             if evaluation.outcome == "allow":
+                if evaluation.approval_id is not None:
+                    raise AuthorizationVerificationError("Automatic authorization included an approval ID")
                 self._manager.handler.verify_action(request, evaluation.authorization_receipt or "")
             elif evaluation.outcome == "approval_required":
                 approval = self._manager.create_for_action(request, evaluation.approval_id)
@@ -47,6 +47,8 @@ class ExecutionInterceptor:
                 self._require_approved(decision)
                 if on_decision is not None:
                     on_decision(decision)
+            else:
+                raise AuthorizationVerificationError("Backend returned an unknown execution outcome")
             return function()
         except BaseException:
             # Retain the claim after evaluation: repeating a possibly consumed authorization is unsafe.
@@ -56,7 +58,8 @@ class ExecutionInterceptor:
         self, request: ActionRequest, function: Callable[[], Any], timeout: float | None,
         on_decision: Callable[[ApprovalDecision], Any] | None = None,
     ) -> Any:
-        async with self._async_lock:
+        # One lock covers sync and async callers sharing this interceptor.
+        with self._sync_lock:
             if request.request_id in self._claimed:
                 raise AuthorizationVerificationError("This authorization request was already executed")
             self._claimed.add(request.request_id)
@@ -64,6 +67,8 @@ class ExecutionInterceptor:
         if evaluation.outcome == "deny":
             raise ApprovalRejectedError(evaluation.reason or "Backend denied this action")
         if evaluation.outcome == "allow":
+            if evaluation.approval_id is not None:
+                raise AuthorizationVerificationError("Automatic authorization included an approval ID")
             await self._manager.handler.averify_action(request, evaluation.authorization_receipt or "")
         elif evaluation.outcome == "approval_required":
             approval = await self._manager.acreate_for_action(request, evaluation.approval_id)
@@ -73,6 +78,8 @@ class ExecutionInterceptor:
                 callback_result = on_decision(decision)
                 if isawaitable(callback_result):
                     await callback_result
+        else:
+            raise AuthorizationVerificationError("Backend returned an unknown execution outcome")
         return await function()
 
     @staticmethod
