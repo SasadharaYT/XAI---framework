@@ -16,7 +16,7 @@ def rule(outcome, **kwargs):
 
 
 def _route_context(monkeypatch, request_id='r'):
-    engine = create_engine('sqlite://', poolclass=StaticPool)
+    engine = create_engine('sqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
     main.Base.metadata.create_all(engine)
     sessions = sessionmaker(bind=engine, expire_on_commit=False)
     monkeypatch.setattr(main, 'SessionLocal', sessions)

@@ -182,6 +182,21 @@ def _approval_dict(row: core.GovernanceApproval) -> dict[str, Any]:
     return result
 
 
+def _automatic_receipt(row: core.AutomaticAuthorization) -> str:
+    return jwt.encode({
+        "sub": row.id,
+        "kind": "automatic",
+        "request_id": row.request_id,
+        "project_id": row.project_id,
+        "agent_id": row.agent_id,
+        "action_name": row.action_name,
+        "action_hash": _parameters_hash(json.loads(row.action_parameters_json)),
+        "policy_version": row.policy_version,
+        "jti": row.jti,
+        "exp": int(row.expires_at.replace(tzinfo=timezone.utc).timestamp()),
+    }, _receipt_secret(), algorithm="HS256")
+
+
 def _sync_dashboard_row(db: core.Session, row: core.GovernanceApproval) -> core.Approval:
     existing = db.get(core.Approval, row.id)
     if existing is None:
@@ -294,7 +309,7 @@ def evaluate_action(
     if idempotency_key != payload.request_id:
         raise HTTPException(400, "Idempotency-Key must match request_id")
     with core.SessionLocal() as db:
-        agent, _, _ = _validate_action(db, payload, project_id)
+        agent, _, expires_at = _validate_action(db, payload, project_id)
         fingerprint = _fingerprint(payload)
         approval = db.scalar(
             select(core.GovernanceApproval).where(core.GovernanceApproval.request_id == payload.request_id)
@@ -317,6 +332,16 @@ def evaluate_action(
             return json.loads(previous.response_json)
         response = evaluate(load_policy(), action_name=payload.action_name,
                             project_id=project_id, agent_id=agent.id)
+        if response["outcome"] == "allow":
+            authorization = core.AutomaticAuthorization(
+                id=f"aut-{uuid.uuid4().hex}", request_id=payload.request_id,
+                project_id=project_id, agent_id=agent.id, action_name=payload.action_name,
+                action_parameters_json=_canonical(payload.action_parameters),
+                policy_version=response["policy_version"], expires_at=expires_at,
+                jti=uuid.uuid4().hex,
+            )
+            response["authorization_receipt"] = _automatic_receipt(authorization)
+            db.add(authorization)
         db.add(core.GovernanceEvaluation(
             request_id=payload.request_id,
             project_id=project_id,
@@ -342,6 +367,10 @@ def create_approval(
 ) -> dict[str, Any]:
     if idempotency_key != payload.request_id:
         raise HTTPException(400, "Idempotency-Key must match request_id")
+    # Direct/manual callers must pass the same server policy gate as protected calls.
+    result = evaluate_action(payload, idempotency_key, project_id)
+    if result["outcome"] != "approval_required":
+        raise HTTPException(403, "Only actions requiring human review can create an approval")
     with core.SessionLocal() as db:
         agent, requested_at, expires_at = _validate_action(db, payload, project_id)
         fingerprint = _fingerprint(payload)
@@ -484,22 +513,39 @@ def verify_authorization(
             or claims.get("agent_id") != payload.agent_id
             or claims.get("action_name") != payload.action_name
             or claims.get("action_hash") != parameters_hash
-            or claims.get("sub") != payload.approval_id
         ):
             raise HTTPException(403, "Authorization receipt does not match this action")
-        if payload.approval_id is None:
-            raise HTTPException(403, "Authorization receipt is not attached to an approval")
-        row = db.get(core.GovernanceApproval, payload.approval_id)
-        if (
-            row is None
-            or row.project_id != project_id
-            or row.request_id != payload.request_id
-            or row.agent_id != payload.agent_id
-            or row.action_name != payload.action_name
-            or row.action_parameters_json != _canonical(payload.action_parameters)
-            or row.status != "approved"
-        ):
-            raise HTTPException(403, "Authorization receipt is not valid for this approval")
+        if claims.get("kind") == "automatic":
+            row = db.get(core.AutomaticAuthorization, claims["sub"])
+            decision = json.loads(evaluation.response_json) if evaluation else {}
+            if (
+                payload.approval_id is not None or row is None
+                or row.project_id != project_id or row.request_id != payload.request_id
+                or row.agent_id != payload.agent_id or row.action_name != payload.action_name
+                or row.action_parameters_json != _canonical(payload.action_parameters)
+                or claims.get("policy_version") != row.policy_version
+                or claims["jti"] != row.jti
+                or claims["exp"] != int(row.expires_at.replace(tzinfo=timezone.utc).timestamp())
+                or decision.get("outcome") != "allow"
+                or decision.get("policy_version") != row.policy_version
+                or decision.get("authorization_receipt") != payload.authorization_receipt
+            ):
+                raise HTTPException(403, "Automatic authorization does not match its persisted evaluation")
+        else:
+            if payload.approval_id is None or claims["sub"] != payload.approval_id:
+                raise HTTPException(403, "Authorization receipt is not attached to an approval")
+            row = db.get(core.GovernanceApproval, payload.approval_id)
+            if (
+                row is None
+                or row.project_id != project_id
+                or row.request_id != payload.request_id
+                or row.agent_id != payload.agent_id
+                or row.action_name != payload.action_name
+                or row.action_parameters_json != _canonical(payload.action_parameters)
+                or row.status != "approved"
+                or payload.authorization_receipt != _receipt_for(row)
+            ):
+                raise HTTPException(403, "Authorization receipt is not valid for this approval")
         use = core.AuthorizationUse(
             jti=claims["jti"],
             request_id=payload.request_id,

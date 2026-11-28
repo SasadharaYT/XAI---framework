@@ -51,7 +51,13 @@ def delete_customer(customer_id: int) -> str:
 result = delete_customer(customer_id=123)
 ```
 
-The SDK submits the function name and JSON-compatible arguments. The current backend routes every action to human approval; an evaluator that returns automatic allow or deny is not implemented yet. A human approval requires a one-time authorization receipt verified by the backend before the function runs. Rejection, expiry, cancellation, timeout, backend failure, or failed receipt verification raises a typed exception and does not call the function.
+The SDK submits the function name and JSON-compatible arguments. Backend policy
+may ALLOW, REQUIRE_APPROVAL, or BLOCK. ALLOW requires a backend-issued automatic
+receipt verified and consumed once before execution. REQUIRE_APPROVAL waits for
+human review and verifies its receipt. BLOCK stops without creating an approval.
+Rejection, expiry, cancellation, timeout, backend failure, or failed receipt
+verification raises a typed exception and does not call the function. This applies
+to synchronous and asynchronous protected functions.
 
 For application-level retries, provide an idempotency-key factory that returns the same UUID for the same logical operation and a new UUID for a different operation. The SDK uses it as the request ID for evaluation and approval creation. Use `on_decision` when protected callers need the reviewer comment; the callback runs after verification and before the tool body.
 

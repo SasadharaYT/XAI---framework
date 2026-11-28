@@ -44,6 +44,19 @@ class GovernanceApproval(Base):
 class AuthorizationUse(Base):
     __tablename__ = 'authorization_uses'; jti: Mapped[str] = mapped_column(String, primary_key=True); request_id: Mapped[str] = mapped_column(String, index=True); project_id: Mapped[str] = mapped_column(String, index=True); consumed_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+class AutomaticAuthorization(Base):
+    """Immutable server-issued authority for one persisted ALLOW evaluation."""
+    __tablename__ = 'automatic_authorizations'
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    request_id: Mapped[str] = mapped_column(String, unique=True, index=True)
+    project_id: Mapped[str] = mapped_column(String, index=True)
+    agent_id: Mapped[str] = mapped_column(String)
+    action_name: Mapped[str] = mapped_column(String)
+    action_parameters_json: Mapped[str] = mapped_column(Text)
+    policy_version: Mapped[str] = mapped_column(String)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    jti: Mapped[str] = mapped_column(String, unique=True)
+
 class SignupIn(BaseModel): name: str = Field(min_length=2); email: str; password: str = Field(min_length=8)
 class LoginIn(BaseModel): email: str; password: str; remember: bool = True
 class ProjectIn(BaseModel):

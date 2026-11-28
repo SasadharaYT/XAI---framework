@@ -14,17 +14,17 @@ Responses include `risk_level`, `reason_code`, `matched_rule`
 reused on idempotent retries. See backend `docs/rule-based-evaluator.md` for the
 policy schema and precedence details.
 
-A policy `allow` does not itself authorize execution: evaluation returns no
-authorization receipt, and the SDK must fail closed until it verifies a valid
-receipt. Approval receipts remain available through the human-review flow below.
+A policy `allow` issues an automatic authorization receipt, persisted atomically
+with the evaluation. It does not create a human approval. Both SDK execution paths
+must verify and consume this receipt before calling the protected function.
 
 The SDK calls a FastAPI service over HTTP. The routes below are mounted in this workspace's `Backend/app/governance.py`; they are separate from the SDK package. They currently persist approvals in the backend's existing SQLAlchemy database and surface them through the existing dashboard approval list and decision route.
 
 `POST /api/v1/oversight/evaluate` applies the configured rule policy and may return
 `allow`, `approval_required`, or `deny`. The SDK only runs a protected function
-after the backend verifies and consumes an authorization receipt; policy `allow`
-responses do not issue one, so protected actions still require the human-review
-receipt flow.
+after the backend verifies and consumes an authorization receipt. `allow` uses an
+automatic receipt; `approval_required` waits for human review and verifies its
+receipt; `deny` raises `ApprovalRejectedError` without creating an approval.
 
 ## Authentication and identity
 
@@ -134,6 +134,11 @@ Retries with the same request ID and action return the existing approval; change
 
 If the persisted evaluation for this request has outcome `deny`, approval creation returns `403`; an existing approval for that request cannot be used to authorize execution either.
 
+Direct/manual approval creation first evaluates and persists the policy decision
+if needed. Only `approval_required` may create an approval; `allow` also returns
+`403` here and must use its automatic receipt. This prevents one request from
+obtaining separate automatic and human authorizations.
+
 ## Read, wait, and cancel
 
 - `GET /api/v1/approvals/{approval_id}` returns the full context and `status`. Terminal status also includes `decision` with `status`, `reviewer_id`, `reviewer_comment`, `reviewed_at`, `reason`, and `authorization_receipt` (only for approval).
@@ -157,7 +162,9 @@ Immediately before protected execution, the SDK calls `POST /api/v1/authorizatio
 }
 ```
 
-Only a matching, unexpired, approved receipt is consumed. Success is `200`:
+For automatic receipts, omit `approval_id` or send `null`. For human receipts,
+provide the approved review ID as above. Only matching, unexpired, server-issued
+authorization is consumed. Success is `200`:
 
 ```json
 {"valid":true,"consumed":true,"expires_at":"...Z"}
@@ -165,6 +172,34 @@ Only a matching, unexpired, approved receipt is consumed. Success is `200`:
 
 The receipt binds approval ID, request ID, project, agent, action name, canonical parameter hash, and expiry. Verification inserts a unique receipt-use record; a second or concurrent consume returns `409`. Expired receipts return `410`; signature/action mismatch returns `403`. This is enforced transactionally by the database uniqueness constraint across backend workers. Do not treat a client-side `approved` flag as permission to execute.
 
+Automatic receipts instead bind the automatic authorization ID (`sub`),
+`kind: automatic`, request ID, project, agent, action name, canonical parameter
+hash (`action_hash`), policy version, expiry (`exp`), and a random unique `jti`.
+Canonical parameters use UTF-8 JSON with sorted object keys, compact separators,
+unescaped Unicode, and finite numbers only. The verifier checks the authenticated
+project and current agent membership, signature, expiry, every action binding,
+the persisted authorization row, and the original persisted ALLOW evaluation and
+receipt. The policy version comes from that evaluation, never the client.
+
+Idempotent evaluation retries return the original receipt even after consumption
+or policy changes; they do not mint new authority or extend expiry. A legacy ALLOW
+evaluation without a receipt remains blocked. Missing, invalid, expired, replayed,
+or unverifiable receipts, service errors, and responses without literal
+`valid: true` and `consumed: true` block SDK execution. The SDK also checks the
+returned expiry. Receipt consumption is deliberately not retryable: after an
+ambiguous verification failure or a tool failure after consumption, execution
+stays blocked for that request. This provides at-most-once authorization, not a
+transaction spanning the backend and the external tool.
+
 ## Deployment and limitations
 
-The backend requires `GOVERNANCE_RECEIPT_SECRET` to mint approval receipts. Use a durable shared database for multi-worker deployments; SQLite is suitable only for local/single-instance development. Evaluation uses the configured exact-action policy, but it does not issue automatic authorization receipts, so a policy `allow` alone cannot authorize SDK execution. Automatic agent disablement, dashboard approval filtering by project, and formal SDK-agent-registration idempotency are not implemented. Database/schema changes in this backend should be applied before rollout. Do not run old and new backend versions against the same database during a schema migration without coordinating deployment.
+The backend requires `GOVERNANCE_RECEIPT_SECRET` to mint human and automatic
+receipts. An ALLOW evaluation fails with `503` and persists no new decision if
+signing is unconfigured. Use a durable shared database for multi-worker
+deployments; SQLite is suitable only for local/single-instance development.
+Startup creates the additive `automatic_authorizations` table; deploy this schema
+before routing traffic to the new code. Existing human receipts and approvals
+remain valid under their original rules. Automatic agent disablement, dashboard
+approval filtering by project, and formal SDK-agent-registration idempotency are
+not implemented. Coordinate rollout rather than running old and new backend
+versions against the same database during schema changes.

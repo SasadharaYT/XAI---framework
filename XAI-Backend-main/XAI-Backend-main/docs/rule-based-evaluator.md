@@ -28,10 +28,20 @@ Responses retain outcome/reason/approval_id/authorization_receipt and add
 risk_level, reason_code, matched_rule (rule_id, effect, priority), policy_version.
 The original decision JSON is persisted. Retries return that decision even after
 policy changes; an approval_id may be added once human review is created.
-Change policy version whenever configuration changes. Policy archive management
-and automatic authorization issuance are separate features. This branch returns
-null authorization_receipt even for allow: the existing SDK fails closed without
-a verified receipt. A policy allow is not itself execution authorization.
+Change policy version whenever configuration changes. For `allow`, the backend
+atomically persists an automatic authorization and the evaluation, returning a
+signed single-use `authorization_receipt` with `approval_id: null`. The SDK must
+verify and consume it before execution. `deny` stops execution without approval;
+`approval_required` uses the existing human-review receipt flow. Direct approval
+creation also evaluates policy and accepts only `approval_required`.
+
+Automatic receipts bind request, project, agent, exact action, canonical parameter
+hash, policy version, original expiry, and a random one-time identifier. The
+verifier requires the matching persisted ALLOW evaluation and authorization row;
+client decision flags never grant authority. Retries return the original receipt,
+including after consumption or policy changes, and never renew its expiry.
+Legacy ALLOW evaluations with no receipt remain non-executable; use a new request
+ID for a new logical attempt. Policy archive management remains separate work.
 
 Upgrade SDK response models before enabling the expanded API response: older
 SDK releases reject unknown fields. New models still accept legacy responses.

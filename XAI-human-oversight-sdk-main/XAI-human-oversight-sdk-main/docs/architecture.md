@@ -11,7 +11,11 @@ The SDK is independent of FastAPI implementation and dashboard code. The contrac
 1. A protected call captures its action name, JSON-compatible parameters, project and agent identity, reason, request ID, timestamp, expiry, and metadata.
 2. Credential-like field names in parameters and metadata are rejected before any request is sent.
 3. The SDK posts the action to evaluation with the request ID as the idempotency key.
-4. `deny` blocks. `allow` provides a one-time receipt. `approval_required` creates or attaches to an approval using the same request ID as its idempotency key. The current backend returns `approval_required` for every action; automatic allow/deny evaluation is future backend work.
+4. `deny` blocks without creating an approval. `allow` provides a persisted,
+   single-use automatic receipt bound to the action and policy version.
+   `approval_required` creates or attaches to a human approval using the same
+   request ID as its idempotency key. Both execution paths verify and consume
+   their receipt on the backend before invoking the protected function.
 5. The SDK polls approval status. Pending requests do not invoke the function. For automatic allow or approved status, it sends the receipt and original context to the verification endpoint.
 6. Only a positive, consumed verification response permits the protected function to run. Rejection, expiry, cancellation, timeout, malformed response, or any backend error blocks it.
 

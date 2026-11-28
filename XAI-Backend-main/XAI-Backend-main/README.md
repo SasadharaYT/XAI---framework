@@ -26,4 +26,11 @@ The complete request/response contract, permissions, status codes, idempotency r
 
 ## Current behavior
 
-The evaluator currently places every valid action into human review. The existing dashboard approval decision route records reviewer ID/comment/time and creates a signed, expiring receipt for approval. The SDK's verify endpoint atomically consumes that receipt once before protected execution. Automatic allow/deny evaluation is future work. Avoid treating the dashboard's visual state or any client-supplied approval flag as authorization.
+The rule evaluator returns `allow`, `approval_required`, or `deny`. ALLOW issues a
+persisted, signed, expiring automatic receipt without creating an approval. Human
+review records reviewer details and issues the existing approval receipt. Both
+receipts must be verified and atomically consumed once before SDK execution.
+BLOCK stops execution and cannot create an approval. Missing or invalid policy
+defaults to human review. See `docs/rule-based-evaluator.md` for configuration.
+Startup creates the additive `automatic_authorizations` table. Avoid treating
+dashboard state or any client-supplied decision or approval flag as authorization.
