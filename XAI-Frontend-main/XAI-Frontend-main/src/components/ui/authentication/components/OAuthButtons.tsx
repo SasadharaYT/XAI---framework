@@ -105,4 +105,3 @@ export function OAuthButtons({ remember = false, mode, disabled = false }: OAuth
     </>
   )
 }
-

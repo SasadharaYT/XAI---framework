@@ -82,38 +82,38 @@ export function ReportsPage() {
                 </tr>
               ) : (
                 reports.map((r) => (
-                <tr key={r.id}>
-                  <td>
-                    <b>{r.id}</b>
-                    <small>{r.agent}</small>
-                  </td>
-                  <td>{r.execution}</td>
-                  <td>{r.date}</td>
-                  <td>
-                    <Badge tone={r.risk === 'Critical' || r.risk === 'High' ? 'red' : 'green'}>
-                      {r.risk}
-                    </Badge>
-                  </td>
-                  <td>{r.intervention}</td>
-                  <td>
-                    <Badge tone="amber">Not verified</Badge>
-                  </td>
-                  <td>
-                    <button
-                      className="text-button"
-                      onClick={() => setActive(active === r.id ? null : r.id)}
-                    >
-                      Details
-                    </button>
-                    <button
-                      title="Download demo JSON"
-                      className="icon-button"
-                      onClick={() => download(r)}
-                    >
-                      <Download size={15} />
-                    </button>
-                  </td>
-                </tr>
+                  <tr key={r.id}>
+                    <td>
+                      <b>{r.id}</b>
+                      <small>{r.agent}</small>
+                    </td>
+                    <td>{r.execution}</td>
+                    <td>{r.date}</td>
+                    <td>
+                      <Badge tone={r.risk === 'Critical' || r.risk === 'High' ? 'red' : 'green'}>
+                        {r.risk}
+                      </Badge>
+                    </td>
+                    <td>{r.intervention}</td>
+                    <td>
+                      <Badge tone="amber">Not verified</Badge>
+                    </td>
+                    <td>
+                      <button
+                        className="text-button"
+                        onClick={() => setActive(active === r.id ? null : r.id)}
+                      >
+                        Details
+                      </button>
+                      <button
+                        title="Download demo JSON"
+                        className="icon-button"
+                        onClick={() => download(r)}
+                      >
+                        <Download size={15} />
+                      </button>
+                    </td>
+                  </tr>
                 ))
               )}
             </tbody>

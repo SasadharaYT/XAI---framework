@@ -30,4 +30,3 @@ export function consumeReturnTo(): string {
   sessionStorage.removeItem(RETURN_TO_KEY)
   return isSafePath(value) ? value : AUTH_PATHS.afterLogin
 }
-

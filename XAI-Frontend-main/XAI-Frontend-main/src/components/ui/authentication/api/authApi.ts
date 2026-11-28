@@ -55,10 +55,16 @@ function toAuthApiError(error: unknown): AuthApiError {
       })
     }
     if (status === 0) {
-      return new AuthApiError(0, { code: 'network_error', message: 'Cannot reach the server. Check your connection.' })
+      return new AuthApiError(0, {
+        code: 'network_error',
+        message: 'Cannot reach the server. Check your connection.',
+      })
     }
   }
-  return new AuthApiError(500, { code: 'unknown_error', message: 'Something went wrong. Please try again.' })
+  return new AuthApiError(500, {
+    code: 'unknown_error',
+    message: 'Something went wrong. Please try again.',
+  })
 }
 
 http.interceptors.response.use(
@@ -71,7 +77,8 @@ export function errorMessage(error: unknown): string {
 }
 
 export const authApi = {
-  signup: (body: SignupPayload) => http.post<AuthenticatedResponse>('/signup', body).then((r) => r.data),
+  signup: (body: SignupPayload) =>
+    http.post<AuthenticatedResponse>('/signup', body).then((r) => r.data),
 
   login: (body: LoginPayload) => http.post<LoginResult>('/login', body).then((r) => r.data),
 
@@ -110,4 +117,3 @@ export const authApi = {
   oauthAuthorizeUrl: (provider: OAuthProvider, remember: boolean) =>
     `${AUTH_API_BASE}/oauth/${provider}/authorize?remember=${remember ? 'true' : 'false'}`,
 }
-

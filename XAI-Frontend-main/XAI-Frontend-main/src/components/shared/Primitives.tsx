@@ -76,7 +76,10 @@ export function AsyncState({
 export function WorkspaceTabs({ active }: { active: 'projects' | 'teams' }) {
   return (
     <nav className="workspace-tabs" aria-label="Workspace navigation">
-      <Link className={`workspace-tab ${active === 'projects' ? 'tab-selected' : ''}`} to="/projects">
+      <Link
+        className={`workspace-tab ${active === 'projects' ? 'tab-selected' : ''}`}
+        to="/projects"
+      >
         <FolderKanban size={18} /> Projects
       </Link>
       <Link className={`workspace-tab ${active === 'teams' ? 'tab-selected' : ''}`} to="/teams">

@@ -23,7 +23,15 @@ const BANNER_STYLES: Record<AuthBanner['type'], string> = {
   info: 'border-slate-200 bg-slate-50 text-slate-700',
 }
 
-export function AuthLayout({ icon, title, subtitle, activeTab, banner, children, footer }: AuthLayoutProps) {
+export function AuthLayout({
+  icon,
+  title,
+  subtitle,
+  activeTab,
+  banner,
+  children,
+  footer,
+}: AuthLayoutProps) {
   return (
     <div
       className="auth-page flex min-h-screen w-full items-center justify-center bg-slate-50 p-4 text-slate-900 antialiased"
@@ -86,4 +94,3 @@ export function AuthLayout({ icon, title, subtitle, activeTab, banner, children,
     </div>
   )
 }
-

@@ -20,4 +20,3 @@ export function GuestOnly({ children }: { children?: ReactNode }) {
 
   return children ? <>{children}</> : <Outlet />
 }
-

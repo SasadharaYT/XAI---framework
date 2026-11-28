@@ -15,6 +15,16 @@ def rule(outcome, **kwargs):
                 reason='Configured action policy', action_name='read', **kwargs)
 
 
+def store_policy(sessions, outcome, version='v1', project_id='p'):
+    with sessions() as db:
+        row = db.get(main.ProjectPolicy, project_id)
+        if row is None:
+            row = main.ProjectPolicy(project_id=project_id)
+            db.add(row)
+        row.version, row.enabled, row.rules_json = version, True, json.dumps([rule(outcome)])
+        db.commit()
+
+
 def _route_context(monkeypatch, request_id='r'):
     engine = create_engine('sqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
     main.Base.metadata.create_all(engine)
@@ -59,11 +69,19 @@ def test_unknown_action():
                     project_id='p', agent_id='a')['outcome'] == 'approval_required'
 
 
+@pytest.mark.parametrize('outcome', ['allow', 'deny', 'approval_required'])
+def test_disabled_rules_never_match(outcome):
+    result = evaluate(Policy(version='v1', rules=[rule(outcome, enabled=False)]),
+                      action_name='read', project_id='p', agent_id='a')
+    assert result['outcome'] == 'approval_required'
+    assert result['matched_rule'] is None
+
+
 def test_route_retry_is_pinned_and_context_cannot_override(monkeypatch):
-    engine, _, action = _route_context(monkeypatch)
-    monkeypatch.setenv('GOVERNANCE_POLICY_JSON', json.dumps({'version': 'v1', 'rules': [rule('deny')]}))
+    engine, sessions, action = _route_context(monkeypatch)
+    store_policy(sessions, 'deny')
     first = governance.evaluate_action(action, 'r', 'p')
-    monkeypatch.setenv('GOVERNANCE_POLICY_JSON', json.dumps({'version': 'v2', 'rules': [rule('allow')]}))
+    store_policy(sessions, 'allow', 'v2')
     assert governance.evaluate_action(action, 'r', 'p') == first
     assert first['outcome'] == 'deny'
     with pytest.raises(main.HTTPException) as exc:
@@ -74,7 +92,7 @@ def test_route_retry_is_pinned_and_context_cannot_override(monkeypatch):
 
 def test_denied_evaluation_cannot_be_submitted_for_approval(monkeypatch):
     engine, sessions, action = _route_context(monkeypatch)
-    monkeypatch.setenv('GOVERNANCE_POLICY_JSON', json.dumps({'version': 'v1', 'rules': [rule('deny')]}))
+    store_policy(sessions, 'deny')
     result = governance.evaluate_action(action, action.request_id, 'p')
     assert result['outcome'] == 'deny'
 
@@ -88,7 +106,7 @@ def test_denied_evaluation_cannot_be_submitted_for_approval(monkeypatch):
 
 def test_denied_evaluation_cannot_be_authorized_from_existing_approval(monkeypatch):
     engine, sessions, action = _route_context(monkeypatch)
-    monkeypatch.setenv('GOVERNANCE_POLICY_JSON', json.dumps({'version': 'v1', 'rules': [rule('deny')]}))
+    store_policy(sessions, 'deny')
     result = governance.evaluate_action(action, action.request_id, 'p')
     assert result['outcome'] == 'deny'
     monkeypatch.setenv('GOVERNANCE_RECEIPT_SECRET', 'test-receipt-secret-that-is-at-least-32-characters')

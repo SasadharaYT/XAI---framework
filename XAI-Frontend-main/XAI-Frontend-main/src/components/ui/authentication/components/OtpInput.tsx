@@ -9,7 +9,13 @@ interface OtpInputProps {
   autoFocus?: boolean
 }
 
-export function OtpInput({ length = 6, value, onChange, disabled = false, autoFocus = true }: OtpInputProps) {
+export function OtpInput({
+  length = 6,
+  value,
+  onChange,
+  disabled = false,
+  autoFocus = true,
+}: OtpInputProps) {
   const refs = useRef<Array<HTMLInputElement | null>>([])
   const digits = Array.from({ length }, (_, idx) => value[idx] ?? '')
 
@@ -84,4 +90,3 @@ export function OtpInput({ length = 6, value, onChange, disabled = false, autoFo
     </div>
   )
 }
-

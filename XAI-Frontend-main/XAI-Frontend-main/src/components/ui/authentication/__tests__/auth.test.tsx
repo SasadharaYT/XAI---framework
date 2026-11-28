@@ -117,4 +117,3 @@ describe('Authentication workflow', () => {
     expect(await screen.findByText('Dashboard Home')).toBeInTheDocument()
   })
 })
-

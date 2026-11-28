@@ -2,7 +2,6 @@
 
 import asyncio
 import hashlib
-import json
 import sys
 from pathlib import Path
 
@@ -12,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from app import main
 from test_automatic_authorization import context  # noqa: F401
-from test_policy import rule
+from test_policy import store_policy
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] /
                        'XAI-human-oversight-sdk-main/XAI-human-oversight-sdk-main/src'))
@@ -23,7 +22,7 @@ from governance_sdk import ApprovalRejectedError, AuthorizationVerificationError
 @pytest.mark.parametrize('outcome', ['allow', 'approval_required', 'deny'])
 def test_real_sdk_backend_execution(context, monkeypatch, asynchronous, outcome):
     sessions, _ = context
-    monkeypatch.setenv('GOVERNANCE_POLICY_JSON', json.dumps({'version': 'v1', 'rules': [rule(outcome)]}))
+    store_policy(sessions, outcome)
     with sessions() as db:
         db.add(main.ProjectAPIKey(id='key', project_id='p', key_hash=hashlib.sha256(b'test-key').hexdigest(),
                                  key_prefix='test', name='test', created_by='reviewer'))

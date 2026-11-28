@@ -1496,7 +1496,9 @@ td small {
   background: #fbfdff;
   color: #19375e;
   font-size: 15px;
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
 }
 .project-modal input,
 .project-modal select {
@@ -2660,9 +2662,7 @@ td small {
   min-height: 100vh;
   padding: 72px clamp(20px, 7vw, 110px);
   color: #172a46;
-  background:
-    radial-gradient(circle at 88% 0%, #d7e8ff 0, transparent 36%),
-    #eef4fb;
+  background: radial-gradient(circle at 88% 0%, #d7e8ff 0, transparent 36%), #eef4fb;
 }
 
 .teams-page .page-heading,
@@ -3098,12 +3098,12 @@ body {
   color: var(--sentinel-green) !important;
 }
 
-.landing-page a[class*="bg-[#1556a6]"],
-.landing-page a[class*="bg-[#1556a6]"]:hover {
+.landing-page a[class*='bg-[#1556a6]'],
+.landing-page a[class*='bg-[#1556a6]']:hover {
   background: var(--sentinel-green-dark) !important;
 }
 
-.landing-page section[id="pillars"] {
+.landing-page section[id='pillars'] {
   border-color: var(--sentinel-border) !important;
   background: #fff !important;
 }
@@ -3129,21 +3129,21 @@ body {
   background: var(--sentinel-green-dark) !important;
 }
 
-.auth-page button[class*="bg-slate-900"],
-.auth-page button[class*="bg-slate-900"]:hover,
-.auth-page a[class*="bg-slate-900"],
-.auth-page a[class*="bg-slate-900"]:hover {
+.auth-page button[class*='bg-slate-900'],
+.auth-page button[class*='bg-slate-900']:hover,
+.auth-page a[class*='bg-slate-900'],
+.auth-page a[class*='bg-slate-900']:hover {
   background: var(--sentinel-green-dark) !important;
   border-color: var(--sentinel-green-dark) !important;
 }
 
-.auth-page button[class*="focus:border-slate-900"]:focus,
-.auth-page input[class*="focus:border-slate-900"]:focus {
+.auth-page button[class*='focus:border-slate-900']:focus,
+.auth-page input[class*='focus:border-slate-900']:focus {
   border-color: var(--sentinel-green) !important;
   box-shadow: 0 0 0 3px #16846320 !important;
 }
 
-.auth-page a[class*="text-slate-900"] {
+.auth-page a[class*='text-slate-900'] {
   color: var(--sentinel-green-dark) !important;
 }
 

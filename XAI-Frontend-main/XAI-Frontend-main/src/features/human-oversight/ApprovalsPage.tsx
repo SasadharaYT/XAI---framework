@@ -105,47 +105,47 @@ export function ApprovalsPage() {
                 </tr>
               ) : (
                 list.map((a) => (
-                <tr
-                  key={a.id}
-                  onClick={() => setSelected(a)}
-                  className="click-row"
-                  tabIndex={0}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      setSelected(a)
-                    }
-                  }}
-                >
-                  <td>
-                    <b>{a.agent}</b>
-                    <small>
-                      {a.action} · {a.id}
-                    </small>
-                  </td>
-                  <td>
-                    <code>{a.tool}</code>
-                  </td>
-                  <td>
-                    <Badge tone={tone(a.risk)}>{a.risk}</Badge>
-                  </td>
-                  <td>{a.time}</td>
-                  <td>{a.reviewer}</td>
-                  <td>
-                    <Badge
-                      tone={
-                        a.status === 'Pending'
-                          ? 'amber'
-                          : a.status === 'Approved'
-                            ? 'green'
-                            : 'neutral'
+                  <tr
+                    key={a.id}
+                    onClick={() => setSelected(a)}
+                    className="click-row"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        setSelected(a)
                       }
-                    >
-                      {a.status}
-                    </Badge>
-                  </td>
-                  <td>{a.execution}</td>
-                </tr>
+                    }}
+                  >
+                    <td>
+                      <b>{a.agent}</b>
+                      <small>
+                        {a.action} · {a.id}
+                      </small>
+                    </td>
+                    <td>
+                      <code>{a.tool}</code>
+                    </td>
+                    <td>
+                      <Badge tone={tone(a.risk)}>{a.risk}</Badge>
+                    </td>
+                    <td>{a.time}</td>
+                    <td>{a.reviewer}</td>
+                    <td>
+                      <Badge
+                        tone={
+                          a.status === 'Pending'
+                            ? 'amber'
+                            : a.status === 'Approved'
+                              ? 'green'
+                              : 'neutral'
+                        }
+                      >
+                        {a.status}
+                      </Badge>
+                    </td>
+                    <td>{a.execution}</td>
+                  </tr>
                 ))
               )}
             </tbody>
@@ -219,7 +219,10 @@ export function ApprovalsPage() {
                 placeholder="Add context for the audit record..."
               />
             </label>
-            <div className="demo-note">Decisions are saved to the governance backend. The waiting agent resumes after the backend verifies the decision and authorization receipt.</div>
+            <div className="demo-note">
+              Decisions are saved to the governance backend. The waiting agent resumes after the
+              backend verifies the decision and authorization receipt.
+            </div>
             <footer>
               <button className="secondary-button" onClick={() => setConfirm('Rejected')}>
                 <X size={15} /> Reject
@@ -234,11 +237,7 @@ export function ApprovalsPage() {
             </footer>
             {confirm && (
               <div className="confirm-overlay">
-                <Card
-                  role="alertdialog"
-                  aria-modal="true"
-                  aria-labelledby="approval-confirm-title"
-                >
+                <Card role="alertdialog" aria-modal="true" aria-labelledby="approval-confirm-title">
                   <SectionTitle>
                     <span id="approval-confirm-title">Confirm {confirm.toLowerCase()}?</span>
                   </SectionTitle>

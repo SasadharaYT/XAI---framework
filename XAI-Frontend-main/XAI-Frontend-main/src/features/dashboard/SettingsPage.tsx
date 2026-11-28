@@ -61,9 +61,12 @@ export function SettingsPage() {
                   setTheme(t)
                   const normalized = t.toLowerCase()
                   localStorage.setItem('demo-theme', normalized)
-                  const resolved = normalized === 'system'
-                    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-                    : normalized
+                  const resolved =
+                    normalized === 'system'
+                      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+                        ? 'dark'
+                        : 'light'
+                      : normalized
                   document.documentElement.dataset.theme = resolved
                   window.dispatchEvent(new CustomEvent('demo-theme-change', { detail: resolved }))
                 }}

@@ -61,7 +61,10 @@ export function LoginPage() {
 
       <form onSubmit={handleSubmit} noValidate={false}>
         <div className="mb-3 text-left">
-          <label htmlFor="login-email" className="mb-1 block text-[0.78rem] font-semibold text-slate-700">
+          <label
+            htmlFor="login-email"
+            className="mb-1 block text-[0.78rem] font-semibold text-slate-700"
+          >
             Email address
           </label>
           <div className="relative flex items-center">
@@ -82,7 +85,10 @@ export function LoginPage() {
         </div>
 
         <div className="mb-3 text-left">
-          <label htmlFor="login-password" className="mb-1 block text-[0.78rem] font-semibold text-slate-700">
+          <label
+            htmlFor="login-password"
+            className="mb-1 block text-[0.78rem] font-semibold text-slate-700"
+          >
             Password
           </label>
           <div className="relative flex items-center">
@@ -120,7 +126,10 @@ export function LoginPage() {
             />
             <span>Remember for 30 days</span>
           </label>
-          <Link to={AUTH_PATHS.forgotPassword} className="font-medium text-slate-900 hover:underline">
+          <Link
+            to={AUTH_PATHS.forgotPassword}
+            className="font-medium text-slate-900 hover:underline"
+          >
             Forgot password?
           </Link>
         </div>
@@ -136,4 +145,3 @@ export function LoginPage() {
     </AuthLayout>
   )
 }
-

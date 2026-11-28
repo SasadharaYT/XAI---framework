@@ -29,4 +29,3 @@ export function RequireAuth({ children, fallback }: RequireAuthProps) {
 
   return children ? <>{children}</> : <Outlet />
 }
-

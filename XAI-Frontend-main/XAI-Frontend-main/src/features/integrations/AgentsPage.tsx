@@ -3,7 +3,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Bot, Plus, Search, X, Zap, CircleAlert, Activity, Check, Copy, KeyRound } from 'lucide-react'
+import {
+  Bot,
+  Plus,
+  Search,
+  X,
+  Zap,
+  CircleAlert,
+  Activity,
+  Check,
+  Copy,
+  KeyRound,
+} from 'lucide-react'
 import { agents } from '@/features/dashboard/data'
 import { Page } from '@/components/layout/Page'
 import { Badge, Card, Metric } from '@/components/shared/Primitives'
@@ -23,10 +34,26 @@ export function AgentsPage() {
   const agentsQuery = useQuery({ queryKey: ['agents'], queryFn: demoService.getAgents })
   const removeAgent = useMutation({
     mutationFn: demoService.deleteAgent,
-    onSuccess: () => { client.invalidateQueries({ queryKey: ['agents'] }); setAgentToDelete(null) },
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ['agents'] })
+      setAgentToDelete(null)
+    },
   })
-  const registerAgent = useMutation({ mutationFn: (input: FormData) => demoService.registerAgent(projectId, input), onSuccess: () => { client.invalidateQueries({ queryKey: ['agents'] }); reset(); setOpen(false) } })
-  const createKey = useMutation({ mutationFn: (name: string) => demoService.createProjectApiKey(projectId, name), onSuccess: (result) => { setApiKey(result.api_key); setCopied(false) } })
+  const registerAgent = useMutation({
+    mutationFn: (input: FormData) => demoService.registerAgent(projectId, input),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ['agents'] })
+      reset()
+      setOpen(false)
+    },
+  })
+  const createKey = useMutation({
+    mutationFn: (name: string) => demoService.createProjectApiKey(projectId, name),
+    onSuccess: (result) => {
+      setApiKey(result.api_key)
+      setCopied(false)
+    },
+  })
   const [open, setOpen] = useState(false)
   const [keyOpen, setKeyOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -47,7 +74,9 @@ export function AgentsPage() {
     formState: { errors },
     reset,
   } = useForm<FormData>({ resolver: zodResolver(schema) })
-  const list = (agentsQuery.data ?? agents).filter((a) => `${a.name} ${a.framework}`.toLowerCase().includes(search.toLowerCase()))
+  const list = (agentsQuery.data ?? agents).filter((a) =>
+    `${a.name} ${a.framework}`.toLowerCase().includes(search.toLowerCase()),
+  )
   return (
     <Page
       title="My agents"
@@ -59,25 +88,45 @@ export function AgentsPage() {
       }
     >
       <Card className="table-panel sdk-credentials-card">
-        <div className="sdk-credentials-icon"><KeyRound size={18} /></div>
+        <div className="sdk-credentials-icon">
+          <KeyRound size={18} />
+        </div>
         <div className="sdk-credentials-copy">
           <h3>SDK credentials</h3>
           <p className="muted">Create a project API key to authenticate requests from your SDK.</p>
         </div>
-        <button className="primary-button" onClick={() => { createKey.reset(); setApiKey(''); setCopyError(''); setKeyOpen(true) }}>
+        <button
+          className="primary-button"
+          onClick={() => {
+            createKey.reset()
+            setApiKey('')
+            setCopyError('')
+            setKeyOpen(true)
+          }}
+        >
           Create API key
         </button>
       </Card>
       <div className="metrics-grid">
+        <Metric label="Total agents" value={list.length} delta="Across 4 frameworks" icon={Bot} />
         <Metric
-          label="Total agents"
-          value={list.length}
-          delta="Across 4 frameworks"
-          icon={Bot}
+          label="Active"
+          value={list.filter((agent) => agent.status === 'Active').length}
+          delta="Processing normally"
+          icon={Activity}
         />
-        <Metric label="Active" value={list.filter((agent) => agent.status === 'Active').length} delta="Processing normally" icon={Activity} />
-        <Metric label="Inactive" value={list.filter((agent) => agent.status !== 'Active').length} delta="Available to run" icon={Zap} />
-        <Metric label="Needs attention" value={list.filter((agent) => agent.risk === 'Critical').length} delta="Review critical risk profile" icon={CircleAlert} />
+        <Metric
+          label="Inactive"
+          value={list.filter((agent) => agent.status !== 'Active').length}
+          delta="Available to run"
+          icon={Zap}
+        />
+        <Metric
+          label="Needs attention"
+          value={list.filter((agent) => agent.risk === 'Critical').length}
+          delta="Review critical risk profile"
+          icon={CircleAlert}
+        />
       </div>
       <Card className="table-panel">
         <div className="toolbar">
@@ -115,27 +164,34 @@ export function AgentsPage() {
                 </tr>
               ) : (
                 list.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    <b>{a.name}</b>
-                    <small>{a.description}</small>
-                    <small>ID: {a.id}</small>
-                  </td>
-                  <td>{a.framework}</td>
-                  <td>
-                    <Badge tone={a.status === 'Active' ? 'green' : 'neutral'}>{a.status}</Badge>
-                  </td>
-                  <td>
-                    <Badge
-                      tone={a.risk === 'Critical' ? 'red' : a.risk === 'High' ? 'amber' : 'green'}
-                    >
-                      {a.risk}
-                    </Badge>
-                  </td>
-                  <td>{a.executions.toLocaleString()}</td>
-                  <td>{a.lastRun}</td>
-                  <td><button className="secondary-button" onClick={() => setAgentToDelete({ id: a.id, name: a.name })}>Delete</button></td>
-                </tr>
+                  <tr key={a.id}>
+                    <td>
+                      <b>{a.name}</b>
+                      <small>{a.description}</small>
+                      <small>ID: {a.id}</small>
+                    </td>
+                    <td>{a.framework}</td>
+                    <td>
+                      <Badge tone={a.status === 'Active' ? 'green' : 'neutral'}>{a.status}</Badge>
+                    </td>
+                    <td>
+                      <Badge
+                        tone={a.risk === 'Critical' ? 'red' : a.risk === 'High' ? 'amber' : 'green'}
+                      >
+                        {a.risk}
+                      </Badge>
+                    </td>
+                    <td>{a.executions.toLocaleString()}</td>
+                    <td>{a.lastRun}</td>
+                    <td>
+                      <button
+                        className="secondary-button"
+                        onClick={() => setAgentToDelete({ id: a.id, name: a.name })}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
                 ))
               )}
             </tbody>
@@ -203,7 +259,13 @@ export function AgentsPage() {
                 Register agent
               </button>
             </footer>
-            {removeAgent.isError && <p className="field-error" role="alert">{removeAgent.error instanceof Error ? removeAgent.error.message : 'The agent could not be deleted.'}</p>}
+            {removeAgent.isError && (
+              <p className="field-error" role="alert">
+                {removeAgent.error instanceof Error
+                  ? removeAgent.error.message
+                  : 'The agent could not be deleted.'}
+              </p>
+            )}
           </form>
         </div>
       )}
@@ -225,15 +287,32 @@ export function AgentsPage() {
             <header>
               <div>
                 <span className="eyebrow">Project credentials</span>
-                <h2 id="create-api-key-title">{apiKey ? 'Your API key is ready' : 'Create an API key'}</h2>
-                <p>{apiKey ? 'Copy this key now. For security, it will not be shown again.' : 'Use this key to authenticate your project SDK requests.'}</p>
+                <h2 id="create-api-key-title">
+                  {apiKey ? 'Your API key is ready' : 'Create an API key'}
+                </h2>
+                <p>
+                  {apiKey
+                    ? 'Copy this key now. For security, it will not be shown again.'
+                    : 'Use this key to authenticate your project SDK requests.'}
+                </p>
               </div>
-              <button type="button" className="icon-button" aria-label="Close API key dialog" onClick={closeKeyDialog}>
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Close API key dialog"
+                onClick={closeKeyDialog}
+              >
                 <X size={18} />
               </button>
             </header>
             {!apiKey ? (
-              <form className="api-key-form" onSubmit={(event) => { event.preventDefault(); createKey.mutate(keyName) }}>
+              <form
+                className="api-key-form"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  createKey.mutate(keyName)
+                }}
+              >
                 <label>
                   Key name
                   <input
@@ -244,10 +323,21 @@ export function AgentsPage() {
                     placeholder="e.g. Production SDK"
                   />
                 </label>
-                {createKey.error && <p className="field-error" role="alert">{createKey.error instanceof Error ? createKey.error.message : 'Could not create API key'}</p>}
-                <div className="demo-note"><KeyRound size={14} /> Keep this key private. Anyone with it can access this project.</div>
+                {createKey.error && (
+                  <p className="field-error" role="alert">
+                    {createKey.error instanceof Error
+                      ? createKey.error.message
+                      : 'Could not create API key'}
+                  </p>
+                )}
+                <div className="demo-note">
+                  <KeyRound size={14} /> Keep this key private. Anyone with it can access this
+                  project.
+                </div>
                 <footer>
-                  <button type="button" className="secondary-button" onClick={closeKeyDialog}>Cancel</button>
+                  <button type="button" className="secondary-button" onClick={closeKeyDialog}>
+                    Cancel
+                  </button>
                   <button className="primary-button" type="submit" disabled={createKey.isPending}>
                     {createKey.isPending ? 'Creating…' : 'Create key'}
                   </button>
@@ -261,17 +351,32 @@ export function AgentsPage() {
                     type="button"
                     className="api-key-copy"
                     onClick={() => {
-                      navigator.clipboard.writeText(apiKey).then(() => { setCopied(true); setCopyError('') }).catch(() => setCopyError('Could not copy the key.'))
+                      navigator.clipboard
+                        .writeText(apiKey)
+                        .then(() => {
+                          setCopied(true)
+                          setCopyError('')
+                        })
+                        .catch(() => setCopyError('Could not copy the key.'))
                     }}
                   >
                     {copied ? <Check size={16} /> : <Copy size={16} />}
                     {copied ? 'Copied' : 'Copy'}
                   </button>
                 </div>
-                {copyError && <p className="field-error" role="alert">{copyError}</p>}
-                <div className="demo-note"><strong>Save this key securely.</strong> You will not be able to view it again after closing this window.</div>
+                {copyError && (
+                  <p className="field-error" role="alert">
+                    {copyError}
+                  </p>
+                )}
+                <div className="demo-note">
+                  <strong>Save this key securely.</strong> You will not be able to view it again
+                  after closing this window.
+                </div>
                 <footer>
-                  <button type="button" className="primary-button" onClick={closeKeyDialog}>Done</button>
+                  <button type="button" className="primary-button" onClick={closeKeyDialog}>
+                    Done
+                  </button>
                 </footer>
               </div>
             )}
@@ -294,15 +399,20 @@ export function AgentsPage() {
             aria-describedby="delete-agent-description"
             tabIndex={-1}
           >
-            <div className="delete-modal-icon"><CircleAlert size={22} /></div>
+            <div className="delete-modal-icon">
+              <CircleAlert size={22} />
+            </div>
             <div>
               <h2 id="delete-agent-title">Delete agent?</h2>
               <p id="delete-agent-description">
-                You are about to delete <strong>{agentToDelete.name}</strong>. This action cannot be undone.
+                You are about to delete <strong>{agentToDelete.name}</strong>. This action cannot be
+                undone.
               </p>
             </div>
             <footer>
-              <button type="button" className="secondary-button" onClick={closeDeleteDialog}>Cancel</button>
+              <button type="button" className="secondary-button" onClick={closeDeleteDialog}>
+                Cancel
+              </button>
               <button
                 type="button"
                 className="danger-button"
