@@ -2,13 +2,8 @@
 
 ## Rule evaluator update
 
-Evaluation uses the request project's enabled policy from the backend database.
-Active project members manage it with dashboard-authenticated GET/PUT
-`/api/v1/projects/{project_id}/policy`; SDK project keys cannot manage policies.
-`GOVERNANCE_POLICY_JSON` is not used as a global fallback. Missing, disabled, or
-invalid stored policies require human review. See backend
-`docs/project-policy-api.md` for setup, migration, and the policy API contract.
-Wire outcomes remain `allow`, `approval_required`, `deny`.
+Evaluation now uses deployment-configured exact-action rules from
+`GOVERNANCE_POLICY_JSON`. Wire outcomes remain `allow`, `approval_required`, `deny`.
 Rules match exact action names and may be scoped to backend-verified project and
 agent identities. Precedence is `deny`, then `approval_required`, then `allow`;
 within an outcome, narrower identity scope, higher priority, and stable rule ID

@@ -14,13 +14,11 @@ from typing import Any
 import jwt
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.security import HTTPAuthorizationCredentials
-from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm.exc import StaleDataError
 
 from . import main as core
-from .policy import Policy, ProjectPolicyIn, evaluate
+from .policy import evaluate, load_policy
 
 router = APIRouter()
 
@@ -332,7 +330,7 @@ def evaluate_action(
             if previous.project_id != project_id or previous.body_hash != fingerprint:
                 raise HTTPException(409, "Idempotency key was reused with different action data")
             return json.loads(previous.response_json)
-        response = evaluate(load_project_policy(db, project_id), action_name=payload.action_name,
+        response = evaluate(load_policy(), action_name=payload.action_name,
                             project_id=project_id, agent_id=agent.id)
         if response["outcome"] == "allow":
             authorization = core.AutomaticAuthorization(
@@ -359,74 +357,6 @@ def evaluate_action(
                 raise HTTPException(409, "Idempotency key was reused with different action data") from None
             return json.loads(previous.response_json)
         return response
-
-
-def load_project_policy(db: core.Session, project_id: str) -> Policy:
-    """Missing, disabled, or corrupt tenant configuration always requires review."""
-    row = db.get(core.ProjectPolicy, project_id)
-    if row is None:
-        return Policy(version="default")
-    try:
-        stored = ProjectPolicyIn.model_validate({
-            "version": row.version, "enabled": row.enabled, "rules": json.loads(row.rules_json),
-        })
-        return Policy(version=stored.version, rules=stored.rules if stored.enabled else [])
-    except (ValidationError, ValueError, TypeError):
-        return Policy(version="invalid")
-
-
-def _policy_dict(row: core.ProjectPolicy) -> dict[str, Any]:
-    return {"project_id": row.project_id, "version": row.version, "enabled": row.enabled,
-            "rules": json.loads(row.rules_json), "created_at": _iso(row.created_at),
-            "updated_at": _iso(row.updated_at)}
-
-
-@router.get("/api/v1/projects/{project_id}/policy")
-def get_project_policy(project_id: str, user: core.User = Depends(core.current_user)) -> dict[str, Any]:
-    with core.SessionLocal() as db:
-        _require_membership(db, user, project_id)
-        if db.get(core.Project, project_id) is None:
-            raise HTTPException(404, "Project not found")
-        row = db.get(core.ProjectPolicy, project_id)
-        if row is None:
-            raise HTTPException(404, "Project policy not configured")
-        return _policy_dict(row)
-
-
-@router.put("/api/v1/projects/{project_id}/policy")
-def put_project_policy(
-    project_id: str, payload: ProjectPolicyIn, user: core.User = Depends(core.current_user),
-) -> dict[str, Any]:
-    with core.SessionLocal() as db:
-        _require_membership(db, user, project_id)
-        if db.get(core.Project, project_id) is None:
-            raise HTTPException(404, "Project not found")
-        for rule in payload.rules:
-            if rule.project_id is not None and rule.project_id != project_id:
-                raise HTTPException(422, "Rule project must match the policy project")
-            if rule.agent_id is not None:
-                agent = db.get(core.Agent, rule.agent_id)
-                if agent is None or agent.project_id != project_id:
-                    raise HTTPException(422, "Rule agent must belong to the policy project")
-        rules_json = _canonical([rule.model_dump() for rule in payload.rules])
-        row = db.get(core.ProjectPolicy, project_id)
-        if row is None:
-            row = core.ProjectPolicy(project_id=project_id, version=payload.version,
-                                     enabled=payload.enabled, rules_json=rules_json)
-            db.add(row)
-        elif (row.version, row.enabled, row.rules_json) == (payload.version, payload.enabled, rules_json):
-            return _policy_dict(row)
-        else:
-            if row.version == payload.version:
-                raise HTTPException(409, "Policy changes require a new version")
-            row.version, row.enabled, row.rules_json = payload.version, payload.enabled, rules_json
-            row.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
-        try:
-            db.commit()
-        except (IntegrityError, StaleDataError):
-            db.rollback()
-            raise HTTPException(409, "Policy changed concurrently; fetch it and retry") from None
-        return _policy_dict(row)
 
 
 @router.post("/api/v1/approvals", status_code=201)

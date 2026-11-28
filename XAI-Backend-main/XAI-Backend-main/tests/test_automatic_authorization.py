@@ -1,5 +1,6 @@
 """Server-issued authority, persisted binding, and single-use enforcement."""
 
+import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
@@ -7,14 +8,14 @@ import jwt
 import pytest
 
 from app import main, governance
-from test_policy import _route_context, store_policy
+from test_policy import _route_context, rule
 
 
 @pytest.fixture
 def context(monkeypatch):
     engine, sessions, action = _route_context(monkeypatch)
     monkeypatch.setenv('GOVERNANCE_RECEIPT_SECRET', 'testing-only-signing-key-at-least-32-characters')
-    store_policy(sessions, 'allow')
+    monkeypatch.setenv('GOVERNANCE_POLICY_JSON', json.dumps({'version': 'v1', 'rules': [rule('allow')]}))
     yield sessions, action
     engine.dispose()
 
@@ -36,7 +37,7 @@ def test_allow_issues_one_receipt_and_retry_cannot_renew_it(context, monkeypatch
     claims = jwt.decode(first['authorization_receipt'], governance._receipt_secret(), algorithms=['HS256'])
     assert claims['policy_version'] == 'v1'
     assert claims['action_hash'] == governance._parameters_hash(action.action_parameters)
-    store_policy(sessions, 'deny', 'v2')
+    monkeypatch.setenv('GOVERNANCE_POLICY_JSON', json.dumps({'version': 'v2', 'rules': [rule('deny')]}))
     retry = action.model_copy(update={'expires_at': action.expires_at + timedelta(minutes=1)})
     assert governance.evaluate_action(retry, 'r', 'p') == first
     request = verification(action, first['authorization_receipt'])
@@ -108,7 +109,7 @@ def test_unconfigured_signing_does_not_persist_allow(context, monkeypatch):
 @pytest.mark.parametrize('outcome', ['allow', 'deny'])
 def test_direct_approval_cannot_bypass_policy(context, monkeypatch, outcome):
     sessions, action = context
-    store_policy(sessions, outcome)
+    monkeypatch.setenv('GOVERNANCE_POLICY_JSON', json.dumps({'version': 'v1', 'rules': [rule(outcome)]}))
     with pytest.raises(main.HTTPException) as exc:
         governance.create_approval(action, 'r', 'p')
     assert exc.value.status_code == 403
@@ -118,9 +119,7 @@ def test_direct_approval_cannot_bypass_policy(context, monkeypatch, outcome):
 
 def test_human_review_still_requires_approved_single_use_receipt(context, monkeypatch):
     sessions, action = context
-    with sessions() as db:
-        db.query(main.ProjectPolicy).delete()
-        db.commit()
+    monkeypatch.delenv('GOVERNANCE_POLICY_JSON')
     result = governance.evaluate_action(action, 'r', 'p')
     assert result['outcome'] == 'approval_required'
     assert result['authorization_receipt'] is None
@@ -159,7 +158,6 @@ def test_concurrent_consumers_only_one_succeeds(context, monkeypatch, tmp_path):
         db.add(main.Agent(id='a', project_id='p', name='Agent', description='', framework='', endpoint=''))
         db.commit()
     try:
-        store_policy(sessions, 'allow')
         # Concurrent evaluation retries must also return exactly the same authority.
         with ThreadPoolExecutor(max_workers=4) as pool:
             results = list(pool.map(lambda _: governance.evaluate_action(action, 'r', 'p'), range(4)))
