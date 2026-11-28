@@ -1,5 +1,17 @@
 # Backend API contract and current implementation
 
+## Dashboard recorded-evidence API
+
+Dashboard JWTs belonging to active project members may read
+`GET /api/v1/projects/{project_id}/evaluations` (bounded limit/offset pagination)
+and `GET /api/v1/projects/{project_id}/evaluations/{request_id}`. SDK project keys
+cannot use these endpoints. They expose original saved decisions, available
+action context and human-review records with explicit field-availability states,
+but never signed receipts. A recorded authorization consumption is not evidence
+of tool execution. See backend `docs/recorded-evidence-api.md` for the complete
+response, historical limitations, and additive schema setup. SDK evaluation and
+approval wire contracts remain unchanged.
+
 ## Rule evaluator update
 
 Evaluation uses the request project's enabled policy from the backend database.

@@ -1,5 +1,10 @@
 # Governance API backend
 
+Recorded decisions are available to active project members through
+`GET /api/v1/projects/{project_id}/evaluations` and its request-detail endpoint.
+See [recorded evidence API and migration](docs/recorded-evidence-api.md) for field
+availability, security, and the additive `evaluation_contexts` schema.
+
 This FastAPI service implements the HTTP API used by the separate Human-in-the-Loop Python SDK. It is an API service only; it does not add a policy/risk engine or frontend.
 
 ## Local setup
